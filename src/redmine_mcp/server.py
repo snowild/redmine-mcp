@@ -1356,7 +1356,7 @@ def get_attachment_image(
     attachment_id: int,
     thumbnail: bool = True,
     max_size: int = DEFAULT_THUMBNAIL_SIZE
-) -> Image | str:
+):
     """
     下載 Redmine 附件圖片，供 AI 視覺分析
     
