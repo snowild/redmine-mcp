@@ -793,7 +793,7 @@ class RedmineClient:
         
         # 下載檔案（需帶認證）
         try:
-            response = self.session.get(content_url, timeout=self.config.timeout)
+            response = self.session.get(content_url, timeout=self.config.redmine_timeout)
             response.raise_for_status()
             return response.content, attachment
         except requests.exceptions.RequestException as e:
