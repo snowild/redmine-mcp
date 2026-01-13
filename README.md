@@ -170,7 +170,26 @@ uv run python tests/scripts/claude_integration.py
 
 If you need to update to the latest version of the MCP server or reinstall it:
 
-### 1. Remove Previous Installation
+### Quick Update (Recommended)
+
+```bash
+# Navigate to project directory
+cd /path/to/redmine-mcp
+
+# Pull latest changes (if from git)
+git pull origin main
+
+# Force reinstall with uv tool
+uv tool install . --force --reinstall
+
+# Restart Claude Code to reload MCP server
+```
+
+### Full Reinstallation
+
+If quick update doesn't work, follow these steps:
+
+#### 1. Remove Previous Installation
 
 ```bash
 # Remove from Claude Code
@@ -183,7 +202,7 @@ uv tool uninstall redmine-mcp
 pip uninstall redmine-mcp
 ```
 
-### 2. Install Latest Version
+#### 2. Install Latest Version
 
 ```bash
 # Navigate to project directory
@@ -199,52 +218,87 @@ uv tool install .
 pip install .
 ```
 
-### 3. Re-register with Claude Code
+#### 3. Re-register with Claude Code
 
 ```bash
-claude mcp add redmine "redmine-mcp" \
+# Use full path to avoid PATH conflicts
+claude mcp add redmine "$(which redmine-mcp)" \
   -e REDMINE_DOMAIN="https://your-redmine-domain.com" \
   -e REDMINE_API_KEY="your_api_key_here" \
   -e REDMINE_MCP_LOG_LEVEL="INFO" \
   -e REDMINE_MCP_TIMEOUT="30"
 ```
 
-### 4. Verify Updated Installation
+#### 4. Verify Updated Installation
 
 ```bash
+# Check installed version
+uv tool list | grep redmine
+
 # Verify MCP registration
 claude mcp list
 
 # Or check in Claude Code using slash command
 # /mcp
-
-# Or test directly
-uv run python -m redmine_mcp.server --help
 ```
 
-> **Important Notes:**
-> - Environment variable names have been updated for better project isolation
-> - Now supports both `REDMINE_MCP_LOG_LEVEL` (preferred) and `LOG_LEVEL` (backward compatibility)
-> - Log level handling is now more robust with automatic case conversion and FastMCP compatibility
+### Troubleshooting Update Issues
 
-## 🛠️ Available MCP Tools
+**Problem: Old version still running after update**
+- This usually happens when PATH has multiple `redmine-mcp` executables
+- Solution: Use full path in Claude Code MCP config
+
+```bash
+# Find the correct path
+ls -la ~/.local/bin/redmine-mcp
+
+# Update MCP config with full path
+claude mcp remove redmine
+claude mcp add redmine "/Users/YOUR_USERNAME/.local/bin/redmine-mcp" \
+  -e REDMINE_DOMAIN="https://your-redmine-domain.com" \
+  -e REDMINE_API_KEY="your_api_key_here"
+```
+
+**Problem: "Failed to reconnect to redmine" after update**
+- Restart Claude Code completely (close and reopen)
+- Or use `/mcp` command and select `restart` for redmine server
+
+> **Important Notes:**
+> - Always restart Claude Code after updating MCP server
+> - Use `--force --reinstall` flags to ensure clean installation
+> - Check tool count in `/mcp` to verify update (current: 26 tools)
+
+## 🛠️ Available MCP Tools (26 tools)
 
 ### Basic Tools
 | Tool Name | Description |
 |-----------|-------------|
 | `server_info` | Display server information and configuration status |
 | `health_check` | Check server and Redmine connection health status |
+| `refresh_cache` | Manually refresh enum values and user cache |
 
 ### Issue Operations
 | Tool Name | Description |
 |-----------|-------------|
 | `get_issue` | Get detailed information of specified issue |
-| `create_new_issue` | Create a new issue |
+| `create_new_issue` | Create a new issue (supports name parameters) |
 | `update_issue_status` | Update issue status |
 | `update_issue_content` | Update issue content (title, description, etc.) |
-| `add_issue_note` | Add notes to issues |
+| `add_issue_note` | Add notes to issues (supports time tracking) |
 | `assign_issue` | Assign or unassign issues |
 | `close_issue` | Close issue and set completion rate |
+
+### Journal Tools
+| Tool Name | Description |
+|-----------|-------------|
+| `list_issue_journals` | List all journals/notes for an issue |
+| `get_journal` | Get detailed information of a specific journal |
+
+### Attachment Tools ✨ New
+| Tool Name | Description |
+|-----------|-------------|
+| `get_attachment_info` | Get attachment metadata (without downloading) |
+| `get_attachment_image` | Download image for AI visual analysis (supports thumbnail) |
 
 ### Query Tools
 | Tool Name | Description |
@@ -258,6 +312,13 @@ uv run python -m redmine_mcp.server --help
 | `get_priorities` | Get all available issue priorities |
 | `get_time_entry_activities` | Get all available time tracking activities |
 | `get_document_categories` | Get all available document categories |
+
+### User Tools
+| Tool Name | Description |
+|-----------|-------------|
+| `search_users` | Search users by name or login |
+| `list_users` | List all users |
+| `get_user` | Get detailed information of a specific user |
 
 ## 💡 Usage Examples
 
@@ -388,6 +449,41 @@ redmine-mcp/
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 📦 Release Notes
+
+### v0.4.0 (Upcoming)
+**New Features:**
+- **Attachment Image Analysis**: New `get_attachment_image` tool for AI visual analysis of Redmine attachments
+- **Thumbnail Mode**: Automatically resize large images to reduce token consumption (default: 800px max)
+- **Attachment Info**: New `get_attachment_info` tool to get attachment metadata without downloading
+
+**Dependencies:**
+- Added Pillow >= 10.0.0 for image processing
+
+### v0.3.1
+- Bug fixes and stability improvements
+- Documentation updates
+
+### v0.3.0
+**New Features:**
+- **Journal Tools**: `list_issue_journals`, `get_journal` for viewing issue notes and history
+- **Time Tracking**: `add_issue_note` now supports time entry recording
+- **Name Parameters**: Support using names instead of IDs for status, priority, tracker, and user
+
+**Improvements:**
+- Smart caching system for enum values and users
+- Multi-domain cache support
+- Better error messages with available options
+
+### v0.2.0
+- Initial public release
+- Basic issue management (CRUD operations)
+- Project and user queries
+- Claude Code integration
+
+### v0.1.0
+- Internal development version
 
 ## 🔗 Related Links
 

@@ -36,6 +36,7 @@ redmine-mcp/
 - **MCP SDK**: mcp[cli] >= 1.9.4 (使用 FastMCP)
 - **HTTP 客戶端**: requests >= 2.31.0
 - **配置管理**: python-dotenv >= 1.0.0
+- **圖片處理**: Pillow >= 10.0.0
 - **Python 版本**: >= 3.12
 
 ### MCP 服務器架構
@@ -87,12 +88,14 @@ claude mcp add redmine "redmine-mcp" \
   - `REDMINE_MCP_TIMEOUT`: 請求超時時間（秒）
   - `REDMINE_TIMEOUT`: 向後相容的超時設定
 
-### 可用的 MCP 工具（22 個）
-- **管理工具**: server_info, health_check, refresh_cache ✨ 新增
+### 可用的 MCP 工具（26 個）
+- **管理工具**: server_info, health_check, refresh_cache
 - **查詢工具**: get_issue, list_project_issues, get_projects, get_issue_statuses, get_trackers, get_priorities, get_time_entry_activities, get_document_categories, search_issues, get_my_issues
-- **用戶工具**: search_users, list_users, get_user ✨ 新增
-- **編輯工具**: update_issue_status, update_issue_content, add_issue_note ✨ 時間記錄支援, assign_issue, close_issue ✨ 名稱參數支援
-- **建立工具**: create_new_issue ✨ 名稱參數支援
+- **備註工具**: list_issue_journals, get_journal
+- **附件工具**: get_attachment_info, get_attachment_image ✨ 新增（支援縮圖與視覺分析）
+- **用戶工具**: search_users, list_users, get_user
+- **編輯工具**: update_issue_status, update_issue_content, add_issue_note（支援時間記錄）, assign_issue, close_issue
+- **建立工具**: create_new_issue（支援名稱參數）
 
 ## 常用指令
 
@@ -194,6 +197,102 @@ create_new_issue(
 - 高
 - 緊急
 ```
+
+## 備註查詢功能 ✨
+
+### 列出議題備註
+使用 `list_issue_journals` 列出議題的所有備註記錄：
+
+```python
+# 列出有備註內容的記錄
+list_issue_journals(issue_id=123)
+
+# 包含屬性變更記錄（狀態、優先權等變更）
+list_issue_journals(issue_id=123, include_property_changes=True)
+```
+
+輸出範例：
+```
+議題 #123 的備註記錄（共 3 筆）:
+==================================================
+
+📝 Journal #456
+   作者: 張三
+   時間: 2025-01-15T10:30:00Z
+   備註內容:
+      已完成初步測試
+
+📝 Journal #457
+   作者: 李四
+   時間: 2025-01-16T14:20:00Z
+   🔒 私有備註
+   備註內容:
+      內部討論記錄
+```
+
+### 取得單一備註詳情
+使用 `get_journal` 取得特定備註的完整資訊：
+
+```python
+# 取得議題 #123 中的 Journal #456
+get_journal(issue_id=123, journal_id=456)
+```
+
+輸出包含：
+- Journal ID 和所屬議題
+- 作者資訊（姓名和 ID）
+- 建立時間
+- 備註內容
+- 屬性變更詳情（舊值 → 新值）
+
+## 附件圖片視覺分析功能 ✨
+
+### 取得附件資訊
+使用 `get_attachment_info` 取得附件的詳細資訊（不下載檔案）：
+
+```python
+# 取得附件資訊
+get_attachment_info(attachment_id=123)
+```
+
+輸出包含：檔案名稱、大小、類型、上傳者、上傳時間、下載連結
+
+### 視覺分析圖片附件
+使用 `get_attachment_image` 下載圖片並供 AI 進行視覺分析：
+
+```python
+# 使用縮圖模式（預設，減少 token 消耗）
+get_attachment_image(attachment_id=123)
+
+# 指定縮圖最大尺寸
+get_attachment_image(attachment_id=123, max_size=600)
+
+# 取得原始大小圖片（不縮圖）
+get_attachment_image(attachment_id=123, thumbnail=False)
+```
+
+### 使用流程範例
+```
+1. get_issue(123) → 取得議題，查看附件列表
+2. get_attachment_info(456) → 確認附件資訊
+3. get_attachment_image(456) → AI 視覺分析圖片內容
+```
+
+### 功能特色
+- **縮圖模式**: 預設啟用，將大圖縮小至 800px，大幅減少 token 消耗
+- **格式轉換**: 自動轉換為 JPEG 格式，優化檔案大小
+- **透明度處理**: PNG 透明背景自動轉為白色
+- **錯誤處理**: 非圖片類型、檔案過大等情況會返回友好訊息
+
+### 支援的圖片格式
+- PNG (`image/png`)
+- JPEG (`image/jpeg`)
+- GIF (`image/gif`)
+- WebP (`image/webp`)
+
+### 限制
+- 檔案大小上限：10 MB
+- 預設縮圖尺寸：800 px（最大邊長）
 
 ## 時間記錄功能 ✨
 

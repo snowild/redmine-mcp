@@ -736,6 +736,19 @@ class RedmineClient:
             
         return response['time_entry']['id']
     
+
+    def get_issue_journals(self, issue_id: int) -> List[Dict[str, Any]]:
+        """取得議題的所有備註/日誌記錄
+        
+        Args:
+            issue_id: 議題 ID
+            
+        Returns:
+            備註列表，每個備註包含 id, user, notes, created_on, details 等欄位
+        """
+        issue_data = self.get_issue_raw(issue_id, include=['journals'])
+        return issue_data.get('journals', [])
+
     def test_connection(self) -> bool:
         """測試連線"""
         try:
@@ -743,6 +756,48 @@ class RedmineClient:
             return 'user' in response
         except RedmineAPIError:
             return False
+
+    def get_attachment(self, attachment_id: int) -> Dict[str, Any]:
+        """
+        取得附件的詳細資訊
+        
+        Args:
+            attachment_id: 附件 ID
+            
+        Returns:
+            附件資訊字典，包含 id, filename, filesize, content_type, content_url 等
+        """
+        response = self._make_request('GET', f'/attachments/{attachment_id}.json')
+        
+        if 'attachment' not in response:
+            raise RedmineAPIError(f"附件 {attachment_id} 不存在")
+        
+        return response['attachment']
+    
+    def download_attachment(self, attachment_id: int) -> tuple[bytes, Dict[str, Any]]:
+        """
+        下載附件內容
+        
+        Args:
+            attachment_id: 附件 ID
+            
+        Returns:
+            (檔案二進位內容, 附件資訊字典)
+        """
+        # 取得附件資訊
+        attachment = self.get_attachment(attachment_id)
+        content_url = attachment.get('content_url')
+        
+        if not content_url:
+            raise RedmineAPIError(f"附件 {attachment_id} 沒有下載連結")
+        
+        # 下載檔案（需帶認證）
+        try:
+            response = self.session.get(content_url, timeout=self.config.timeout)
+            response.raise_for_status()
+            return response.content, attachment
+        except requests.exceptions.RequestException as e:
+            raise RedmineAPIError(f"下載附件失敗: {str(e)}")
 
 
 # 全域客戶端實例

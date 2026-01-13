@@ -13,6 +13,7 @@ from .config import get_config
 config = get_config()
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp.utilities.types import Image
 from .redmine_client import get_client, RedmineAPIError
 
 # 建立 FastMCP 服務器實例
@@ -1203,6 +1204,280 @@ Domain: {domain}
         
     except RedmineAPIError as e:
         return f"刷新快取失敗: {str(e)}"
+    except Exception as e:
+        return f"系統錯誤: {str(e)}"
+
+
+@mcp.tool()
+def list_issue_journals(issue_id: int, include_property_changes: bool = False) -> str:
+    """
+    列出議題的所有備註/日誌記錄
+    
+    Args:
+        issue_id: 議題 ID
+        include_property_changes: 是否包含屬性變更記錄（預設否，僅顯示有備註內容的記錄）
+    
+    Returns:
+        議題備註列表，包含 Journal ID、作者、時間、內容
+    """
+    try:
+        client = get_client()
+        journals = client.get_issue_journals(issue_id)
+        
+        if not journals:
+            return f"議題 #{issue_id} 沒有任何備註記錄"
+        
+        # 根據參數過濾
+        if not include_property_changes:
+            # 只顯示有備註內容的記錄
+            filtered_journals = [j for j in journals if j.get('notes', '').strip()]
+        else:
+            filtered_journals = journals
+        
+        if not filtered_journals:
+            return f"議題 #{issue_id} 沒有符合條件的備註記錄（共 {len(journals)} 筆屬性變更記錄）"
+        
+        result = f"議題 #{issue_id} 的備註記錄（共 {len(filtered_journals)} 筆）:\n"
+        result += "=" * 50 + "\n\n"
+        
+        for journal in filtered_journals:
+            journal_id = journal.get('id', 'N/A')
+            author = journal.get('user', {}).get('name', 'N/A')
+            created_on = journal.get('created_on', 'N/A')
+            notes = journal.get('notes', '').strip()
+            private_notes = journal.get('private_notes', False)
+            details = journal.get('details', [])
+            
+            result += f"📝 Journal #{journal_id}\n"
+            result += f"   作者: {author}\n"
+            result += f"   時間: {created_on}\n"
+            if private_notes:
+                result += f"   🔒 私有備註\n"
+            
+            if notes:
+                result += f"   備註內容:\n"
+                # 縮排備註內容
+                for line in notes.split('\n'):
+                    result += f"      {line}\n"
+            
+            if include_property_changes and details:
+                result += f"   屬性變更 ({len(details)} 項):\n"
+                for detail in details:
+                    prop_name = detail.get('name', 'N/A')
+                    old_value = detail.get('old_value', '(空)')
+                    new_value = detail.get('new_value', '(空)')
+                    result += f"      - {prop_name}: {old_value} → {new_value}\n"
+            
+            result += "\n"
+        
+        return result.strip()
+        
+    except RedmineAPIError as e:
+        return f"取得議題備註失敗: {str(e)}"
+    except Exception as e:
+        return f"系統錯誤: {str(e)}"
+
+
+@mcp.tool()
+def get_journal(issue_id: int, journal_id: int) -> str:
+    """
+    取得議題中特定備註的詳細資訊
+    
+    Args:
+        issue_id: 議題 ID
+        journal_id: 備註 ID (Journal ID)
+    
+    Returns:
+        備註的詳細資訊，包含作者、時間、內容、屬性變更等
+    """
+    try:
+        client = get_client()
+        journals = client.get_issue_journals(issue_id)
+        
+        # 找到指定的 journal
+        target_journal = None
+        for journal in journals:
+            if journal.get('id') == journal_id:
+                target_journal = journal
+                break
+        
+        if not target_journal:
+            return f"找不到備註: 議題 #{issue_id} 中沒有 Journal #{journal_id}"
+        
+        journal_id = target_journal.get('id', 'N/A')
+        author = target_journal.get('user', {}).get('name', 'N/A')
+        author_id = target_journal.get('user', {}).get('id', 'N/A')
+        created_on = target_journal.get('created_on', 'N/A')
+        notes = target_journal.get('notes', '').strip()
+        private_notes = target_journal.get('private_notes', False)
+        details = target_journal.get('details', [])
+        
+        result = f"📝 Journal #{journal_id} 詳細資訊\n"
+        result += "=" * 50 + "\n\n"
+        result += f"議題: #{issue_id}\n"
+        result += f"作者: {author} (ID: {author_id})\n"
+        result += f"建立時間: {created_on}\n"
+        if private_notes:
+            result += f"🔒 這是私有備註\n"
+        
+        result += "\n--- 備註內容 ---\n"
+        if notes:
+            result += notes + "\n"
+        else:
+            result += "(無文字備註)\n"
+        
+        if details:
+            result += f"\n--- 屬性變更 ({len(details)} 項) ---\n"
+            for detail in details:
+                prop_name = detail.get('name', 'N/A')
+                property_type = detail.get('property', 'N/A')
+                old_value = detail.get('old_value', '(空)')
+                new_value = detail.get('new_value', '(空)')
+                result += f"• {prop_name} ({property_type})\n"
+                result += f"  舊值: {old_value}\n"
+                result += f"  新值: {new_value}\n"
+        
+        return result.strip()
+        
+    except RedmineAPIError as e:
+        return f"取得備註失敗: {str(e)}"
+    except Exception as e:
+        return f"系統錯誤: {str(e)}"
+
+
+# 圖片處理相關常數
+MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024  # 10MB
+DEFAULT_THUMBNAIL_SIZE = 800  # 預設縮圖最大邊長
+SUPPORTED_IMAGE_TYPES = {'image/png', 'image/jpeg', 'image/gif', 'image/webp'}
+
+
+@mcp.tool()
+def get_attachment_image(
+    attachment_id: int,
+    thumbnail: bool = True,
+    max_size: int = DEFAULT_THUMBNAIL_SIZE
+) -> Image | str:
+    """
+    下載 Redmine 附件圖片，供 AI 視覺分析
+    
+    Args:
+        attachment_id: 附件 ID
+        thumbnail: 是否生成縮圖以減少 token 消耗（預設 True）
+        max_size: 縮圖最大邊長（預設 800 像素，僅在 thumbnail=True 時生效）
+    
+    Returns:
+        圖片內容（供 AI 視覺解析）或錯誤訊息
+    """
+    try:
+        from io import BytesIO
+        from PIL import Image as PILImage
+        
+        client = get_client()
+        
+        # 下載附件
+        image_data, attachment_info = client.download_attachment(attachment_id)
+        
+        filename = attachment_info.get('filename', 'unknown')
+        content_type = attachment_info.get('content_type', '')
+        filesize = attachment_info.get('filesize', 0)
+        
+        # 檢查是否為圖片類型
+        if content_type not in SUPPORTED_IMAGE_TYPES:
+            return f"附件 #{attachment_id} ({filename}) 不是支援的圖片格式\n" \
+                   f"類型: {content_type}\n" \
+                   f"支援格式: {', '.join(SUPPORTED_IMAGE_TYPES)}"
+        
+        # 檢查檔案大小
+        if filesize > MAX_IMAGE_SIZE_BYTES:
+            return f"附件 #{attachment_id} ({filename}) 檔案過大\n" \
+                   f"大小: {filesize / 1024 / 1024:.2f} MB\n" \
+                   f"限制: {MAX_IMAGE_SIZE_BYTES / 1024 / 1024:.0f} MB"
+        
+        # 處理圖片
+        img = PILImage.open(BytesIO(image_data))
+        original_size = img.size
+        
+        # 轉換模式（處理 RGBA、P 等模式）
+        if img.mode in ('RGBA', 'P'):
+            # 建立白色背景
+            background = PILImage.new('RGB', img.size, (255, 255, 255))
+            if img.mode == 'P':
+                img = img.convert('RGBA')
+            background.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+            img = background
+        elif img.mode != 'RGB':
+            img = img.convert('RGB')
+        
+        # 縮圖處理
+        if thumbnail and (img.width > max_size or img.height > max_size):
+            img.thumbnail((max_size, max_size), PILImage.Resampling.LANCZOS)
+            resized = True
+        else:
+            resized = False
+        
+        # 輸出為 JPEG（較小的檔案大小）
+        output_buffer = BytesIO()
+        img.save(output_buffer, format='JPEG', quality=85, optimize=True)
+        output_data = output_buffer.getvalue()
+        
+        # 記錄處理資訊（透過 logging）
+        import logging
+        logger = logging.getLogger(__name__)
+        if resized:
+            logger.info(
+                f"圖片 #{attachment_id} ({filename}): "
+                f"{original_size[0]}x{original_size[1]} → {img.size[0]}x{img.size[1]}, "
+                f"{len(image_data)} → {len(output_data)} bytes"
+            )
+        
+        return Image(data=output_data, format="jpeg")
+        
+    except RedmineAPIError as e:
+        return f"取得附件圖片失敗: {str(e)}"
+    except Exception as e:
+        return f"處理圖片錯誤: {str(e)}"
+
+
+@mcp.tool()
+def get_attachment_info(attachment_id: int) -> str:
+    """
+    取得附件的詳細資訊（不下載檔案內容）
+    
+    Args:
+        attachment_id: 附件 ID
+    
+    Returns:
+        附件的詳細資訊
+    """
+    try:
+        client = get_client()
+        attachment = client.get_attachment(attachment_id)
+        
+        filesize = attachment.get('filesize', 0)
+        size_text = f"{filesize / 1024 / 1024:.2f} MB" if filesize >= 1024 * 1024 else f"{filesize / 1024:.2f} KB"
+        
+        result = f"""附件 #{attachment.get('id')} 詳細資訊
+==================================================
+
+檔案名稱: {attachment.get('filename', 'N/A')}
+檔案大小: {size_text}
+檔案類型: {attachment.get('content_type', 'N/A')}
+說明: {attachment.get('description', '(無說明)')}
+
+上傳者: {attachment.get('author', {}).get('name', 'N/A')}
+上傳時間: {attachment.get('created_on', 'N/A')}
+
+下載連結: {attachment.get('content_url', 'N/A')}"""
+        
+        # 如果是圖片，提供額外提示
+        content_type = attachment.get('content_type', '')
+        if content_type in SUPPORTED_IMAGE_TYPES:
+            result += f"\n\n💡 這是圖片檔案，可使用 get_attachment_image({attachment.get('id')}) 進行視覺分析"
+        
+        return result
+        
+    except RedmineAPIError as e:
+        return f"取得附件資訊失敗: {str(e)}"
     except Exception as e:
         return f"系統錯誤: {str(e)}"
 
