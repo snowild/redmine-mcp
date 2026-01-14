@@ -511,46 +511,6 @@ docker-compose up -d
 ./quick_start.sh
 ```
 
-## 🔍 Troubleshooting
-
-### Common Issues
-
-**1. API Authentication Failed (401/403 errors)**
-- Verify API key is correct
-- **Check if Redmine has REST API enabled**: Go to `Administration` → `Settings` → `API`, check "Enable REST web service"
-- Verify user permissions are sufficient
-- Check if URL is correct (including http/https and port)
-
-**2. Connection Timeout**
-- Check network connection
-- Adjust `REDMINE_TIMEOUT` environment variable
-- Verify Redmine server status
-
-**3. Issue Creation Failed**
-- Verify project exists and has permissions
-- Check if required fields are filled
-- Verify tracker and status settings
-- **Check basic data configuration**: Ensure roles, trackers, statuses, and workflow setup is complete
-- Verify user has appropriate role and permissions in the project
-
-**4. Status Update Failed**
-- Check if workflow allows the status transition
-- Verify user role has permission to change status
-- Verify target status ID is correct
-
-**5. Project or Issue Not Found**
-- Verify ID is correct
-- Check if user has permission to view the project/issue
-- Verify project status is active
-
-### Debug Mode
-
-Enable debug mode for more detailed error information:
-
-```env
-DEBUG_MODE=true
-```
-
 ## 📁 Project Structure
 
 ```
@@ -566,6 +526,7 @@ redmine-mcp/
 ├── Dockerfile                # Docker build configuration
 ├── docker-compose.yml        # Docker Compose configuration
 ├── .dockerignore             # Docker build exclusions
+├── CHANGELOG.md              # Version history
 ├── pyproject.toml            # Project configuration
 └── README.md                 # Project documentation
 ```
@@ -582,49 +543,9 @@ redmine-mcp/
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 📦 Release Notes
+## 📦 Changelog
 
-### v0.4.0 (Upcoming)
-**New Features:**
-- **SSE Transport Mode**: Support Server-Sent Events for remote access and multi-client connections
-- **Docker Support**: Added Dockerfile and docker-compose.yml for containerized deployment
-- **Command Line Arguments**: New `--transport`, `--host`, `--port` options for flexible configuration
-- **Attachment Image Analysis**: New `get_attachment_image` tool for AI visual analysis of Redmine attachments
-- **Thumbnail Mode**: Automatically resize large images to reduce token consumption (default: 800px max)
-- **Attachment Info**: New `get_attachment_info` tool to get attachment metadata without downloading
-
-**New Environment Variables:**
-- `REDMINE_MCP_TRANSPORT`: Transport mode (`stdio` or `sse`)
-- `REDMINE_MCP_HOST`: SSE bind address (default: `0.0.0.0`)
-- `REDMINE_MCP_PORT`: SSE listen port (default: `8000`)
-
-**Dependencies:**
-- Added Pillow >= 10.0.0 for image processing
-- Updated mcp[cli] to 1.25.0 for SSE host/port support
-
-### v0.3.1
-- Bug fixes and stability improvements
-- Documentation updates
-
-### v0.3.0
-**New Features:**
-- **Journal Tools**: `list_issue_journals`, `get_journal` for viewing issue notes and history
-- **Time Tracking**: `add_issue_note` now supports time entry recording
-- **Name Parameters**: Support using names instead of IDs for status, priority, tracker, and user
-
-**Improvements:**
-- Smart caching system for enum values and users
-- Multi-domain cache support
-- Better error messages with available options
-
-### v0.2.0
-- Initial public release
-- Basic issue management (CRUD operations)
-- Project and user queries
-- Claude Code integration
-
-### v0.1.0
-- Internal development version
+See [CHANGELOG.md](CHANGELOG.md) for version history and release notes.
 
 ## 🔗 Related Links
 
