@@ -4,6 +4,7 @@ Redmine MCP 服務器主程式
 """
 
 import os
+import argparse
 from typing import Any
 from datetime import datetime
 
@@ -1484,8 +1485,50 @@ def get_attachment_info(attachment_id: int) -> str:
 
 def main():
     """MCP 服務器主入口點"""
-    # 透過 stdio 運行服務器
-    mcp.run('stdio')
+    parser = argparse.ArgumentParser(
+        description='Redmine MCP 服務器',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog='''
+範例:
+  redmine-mcp                           # 預設 stdio 模式
+  redmine-mcp --transport sse           # SSE 模式（預設 port 8000）
+  redmine-mcp --transport sse --port 3000 --host 127.0.0.1
+        '''
+    )
+    parser.add_argument(
+        '--transport', '-t',
+        choices=['stdio', 'sse'],
+        default=None,
+        help='傳輸模式：stdio（預設）或 sse'
+    )
+    parser.add_argument(
+        '--host', '-H',
+        default=None,
+        help='SSE 模式綁定位址（預設: 0.0.0.0）'
+    )
+    parser.add_argument(
+        '--port', '-p',
+        type=int,
+        default=None,
+        help='SSE 模式監聽埠（預設: 8000）'
+    )
+
+    args = parser.parse_args()
+    config = get_config()
+
+    # 命令列參數優先於環境變數
+    transport = args.transport or config.transport
+
+    if transport == 'sse':
+        host = args.host or config.sse_host
+        port = args.port or config.sse_port
+        # 設定 SSE 服務器參數
+        mcp.settings.host = host
+        mcp.settings.port = port
+        print(f"啟動 SSE 模式: http://{host}:{port}", flush=True)
+        mcp.run('sse')
+    else:
+        mcp.run('stdio')
 
 
 if __name__ == "__main__":

@@ -80,6 +80,9 @@ LOG_LEVEL=info
 | `REDMINE_API_KEY` | Your Redmine API key | *Required* | `abc123...` |
 | `REDMINE_MCP_LOG_LEVEL` | Log level for this MCP server | `INFO` | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
 | `REDMINE_MCP_TIMEOUT` | Request timeout (seconds) | `30` | `60` |
+| `REDMINE_MCP_TRANSPORT` | Transport mode | `stdio` | `stdio`, `sse` |
+| `REDMINE_MCP_HOST` | SSE bind address | `0.0.0.0` | `127.0.0.1` |
+| `REDMINE_MCP_PORT` | SSE listen port | `8000` | `3000` |
 | `LOG_LEVEL` | Legacy log level (backward compatibility) | - | `debug`, `info` |
 | `REDMINE_TIMEOUT` | Legacy timeout (backward compatibility) | - | `30` |
 
@@ -165,6 +168,133 @@ uv run python -m redmine_mcp.server
 # Test Claude Code integration
 uv run python tests/scripts/claude_integration.py
 ```
+
+## 🌐 SSE Mode & Docker Deployment
+
+### Transport Modes
+
+Redmine MCP supports two transport modes:
+
+| Mode | Use Case | Multi-Client | Deployment |
+|------|----------|--------------|------------|
+| **stdio** (default) | Local CLI usage with Claude Code | ❌ Single | Auto-started by Claude Code |
+| **sse** | Team sharing, remote access, containerized | ✅ Multiple | Manual start required |
+
+### Running in SSE Mode
+
+#### Quick Start (Development)
+
+```bash
+# Navigate to project directory (where .env file is located)
+cd /path/to/redmine-mcp
+
+# Run with uv (reads .env automatically)
+uv run redmine-mcp --transport sse
+
+# Custom host and port
+uv run redmine-mcp --transport sse --host 127.0.0.1 --port 3000
+```
+
+#### Global Installation
+
+```bash
+# Install globally
+uv tool install . --force --reinstall
+
+# Set environment variables
+export REDMINE_DOMAIN=https://your-redmine.com
+export REDMINE_API_KEY=your_api_key_here
+
+# Run from anywhere
+redmine-mcp --transport sse
+```
+
+#### Using .env File
+
+Create a `.env` file in your working directory:
+```env
+REDMINE_DOMAIN=https://your-redmine.com
+REDMINE_API_KEY=your_api_key_here
+REDMINE_MCP_TRANSPORT=sse
+REDMINE_MCP_PORT=8000
+```
+
+> **Note**: `uv run` automatically loads `.env` from the project directory. Global installation requires explicit environment variables or running from the directory containing `.env`.
+
+### Docker Deployment
+
+#### Quick Start with Docker
+
+```bash
+# Build the image
+docker build -t redmine-mcp .
+
+# Run with environment variables
+docker run -d \
+  -e REDMINE_DOMAIN=https://your-redmine.com \
+  -e REDMINE_API_KEY=your_api_key \
+  -p 8000:8000 \
+  --name redmine-mcp \
+  redmine-mcp
+```
+
+#### Using Docker Compose
+
+```bash
+# Edit docker-compose.yml with your Redmine settings
+# Then start the service
+docker compose up -d
+
+# View logs
+docker compose logs -f
+
+# Stop the service
+docker compose down
+```
+
+#### Docker Compose with .env file (Recommended)
+
+1. Create `.env` file:
+```env
+REDMINE_DOMAIN=https://your-redmine.com
+REDMINE_API_KEY=your_api_key_here
+```
+
+2. Update `docker-compose.yml` to use environment variables:
+```yaml
+environment:
+  - REDMINE_DOMAIN=${REDMINE_DOMAIN}
+  - REDMINE_API_KEY=${REDMINE_API_KEY}
+```
+
+3. Start the service:
+```bash
+docker compose up -d
+```
+
+### Connecting Claude Code to SSE Server
+
+Once the SSE server is running, configure Claude Code to connect:
+
+```bash
+# Add MCP with SSE transport
+claude mcp add --transport sse redmine http://localhost:8000/sse
+```
+
+Or manually edit `~/.claude.json`:
+
+```json
+{
+  "mcpServers": {
+    "redmine": {
+      "transport": "sse",
+      "url": "http://localhost:8000/sse"
+    }
+  }
+}
+```
+
+> **Note**: Environment variables (`REDMINE_DOMAIN`, `REDMINE_API_KEY`) are configured on the **SSE server side**, not in Claude Code.
 
 ## 🔄 Updating/Reinstalling MCP
 
@@ -433,7 +563,9 @@ redmine-mcp/
 │   └── validators.py         # Data validation
 ├── tests/                    # Test files
 ├── docs/                     # Documentation directory
-├── docker-compose.yml        # Docker test environment
+├── Dockerfile                # Docker build configuration
+├── docker-compose.yml        # Docker Compose configuration
+├── .dockerignore             # Docker build exclusions
 ├── pyproject.toml            # Project configuration
 └── README.md                 # Project documentation
 ```
@@ -454,12 +586,21 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### v0.4.0 (Upcoming)
 **New Features:**
+- **SSE Transport Mode**: Support Server-Sent Events for remote access and multi-client connections
+- **Docker Support**: Added Dockerfile and docker-compose.yml for containerized deployment
+- **Command Line Arguments**: New `--transport`, `--host`, `--port` options for flexible configuration
 - **Attachment Image Analysis**: New `get_attachment_image` tool for AI visual analysis of Redmine attachments
 - **Thumbnail Mode**: Automatically resize large images to reduce token consumption (default: 800px max)
 - **Attachment Info**: New `get_attachment_info` tool to get attachment metadata without downloading
 
+**New Environment Variables:**
+- `REDMINE_MCP_TRANSPORT`: Transport mode (`stdio` or `sse`)
+- `REDMINE_MCP_HOST`: SSE bind address (default: `0.0.0.0`)
+- `REDMINE_MCP_PORT`: SSE listen port (default: `8000`)
+
 **Dependencies:**
 - Added Pillow >= 10.0.0 for image processing
+- Updated mcp[cli] to 1.25.0 for SSE host/port support
 
 ### v0.3.1
 - Bug fixes and stability improvements

@@ -1,0 +1,35 @@
+# Docker Compose 範例配置
+# 使用方式: docker compose up -d
+
+services:
+  redmine-mcp:
+    build: .
+    container_name: redmine-mcp
+    ports:
+      - "8000:8000"
+    environment:
+      # 必要配置 - 請修改為你的 Redmine 設定
+      - REDMINE_DOMAIN=https://your-redmine-domain.com
+      - REDMINE_API_KEY=your_api_key_here
+      # 可選配置
+      - REDMINE_MCP_PORT=8000
+      - REDMINE_MCP_HOST=0.0.0.0
+      - REDMINE_MCP_LOG_LEVEL=INFO
+      - REDMINE_MCP_TIMEOUT=30
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/sse", "--max-time", "5"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+# 使用 .env 檔案的範例（推薦）:
+# 1. 建立 .env 檔案:
+#    REDMINE_DOMAIN=https://your-redmine-domain.com
+#    REDMINE_API_KEY=your_api_key_here
+#
+# 2. 修改 docker-compose.yml:
+#    environment:
+#      - REDMINE_DOMAIN=${REDMINE_DOMAIN}
+#      - REDMINE_API_KEY=${REDMINE_API_KEY}
