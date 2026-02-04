@@ -296,6 +296,31 @@ Or manually edit `~/.claude.json`:
 
 > **Note**: Environment variables (`REDMINE_DOMAIN`, `REDMINE_API_KEY`) are configured on the **SSE server side**, not in Claude Code.
 
+### Connecting VS Code (GitHub Copilot) to SSE Server
+
+VS Code with GitHub Copilot can also connect to the SSE server. Edit the MCP configuration file:
+
+**macOS**: `~/Library/Application Support/Code/User/mcp.json`
+
+**Windows**: `%APPDATA%\Code\User\mcp.json`
+
+**Linux**: `~/.config/Code/User/mcp.json`
+
+Add the following configuration:
+
+```json
+{
+  "servers": {
+    "redmine": {
+      "type": "sse",
+      "url": "http://localhost:8000/sse"
+    }
+  }
+}
+```
+
+> **Reference**: For more details on VS Code MCP configuration, see [VS Code MCP Servers Documentation](https://code.visualstudio.com/docs/copilot/customization/mcp-servers).
+
 ## 🔄 Updating/Reinstalling MCP
 
 If you need to update to the latest version of the MCP server or reinstall it:
