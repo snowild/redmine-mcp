@@ -16,6 +16,9 @@ services:
       - REDMINE_MCP_HOST=0.0.0.0
       - REDMINE_MCP_LOG_LEVEL=INFO
       - REDMINE_MCP_TIMEOUT=30
+    volumes:
+      # Mount user profiles file (optional, for multi-user support)
+      - ./users.json:/home/mcp/.redmine_mcp/users.json:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8000/sse", "--max-time", "5"]

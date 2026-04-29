@@ -43,6 +43,9 @@ ENV REDMINE_MCP_TRANSPORT=sse
 ENV REDMINE_MCP_HOST=0.0.0.0
 ENV REDMINE_MCP_PORT=8000
 
+# Create config directory for user profiles
+RUN mkdir -p /home/mcp/.redmine_mcp && chown -R mcp:mcp /home/mcp/.redmine_mcp
+
 # Switch to non-root user
 USER mcp
 

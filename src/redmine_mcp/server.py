@@ -20,6 +20,86 @@ from .redmine_client import get_client, RedmineAPIError
 # Create FastMCP server instance
 mcp = FastMCP("Redmine MCP")
 
+def _resolve_user(profile_name: str = None) -> str:
+    """Resolve profile_name to an API key, or None for default.
+    Falls back to the configured default profile if no profile_name is given."""
+    config = get_config()
+    effective_profile = profile_name or config.default_profile_name
+    if not effective_profile:
+        return None
+    api_key = config.get_user_api_key(effective_profile)
+    if not api_key:
+        raise ValueError(f"User profile not found: '{effective_profile}'. Use list_user_profiles() to see available profiles.")
+    return api_key
+
+
+
+@mcp.tool()
+def list_user_profiles() -> str:
+    """List available MCP user profiles configured on this server"""
+    try:
+        config = get_config()
+        profiles = config.list_user_profiles()
+        if not profiles:
+            return "No user profiles configured. Create ~/.redmine_mcp/users.json to add profiles."
+        result = "Available user profiles:\n\n"
+        for name, desc in profiles.items():
+            marker = " (current default)" if name == config.default_profile_name else ""
+            desc_text = f" - {desc}" if desc else ""
+            result += f"- {name}{marker}{desc_text}\n"
+        if config.default_profile_name and config.default_profile_name not in profiles:
+            result += f"\nDefault profile '{config.default_profile_name}' is set but not found in profiles file."
+        return result
+    except Exception as e:
+        return f"Error listing profiles: {str(e)}"
+
+
+@mcp.tool()
+def set_current_user(profile_name: str = "") -> str:
+    """Set the default Redmine user for this session.
+
+    After calling this tool, all subsequent operations will use the specified
+    user's API key unless an explicit profile_name is provided.
+
+    Args:
+        profile_name: Profile name from list_user_profiles(). Pass empty string to clear.
+
+    Returns:
+        Confirmation message
+    """
+    try:
+        config = get_config()
+        if not profile_name:
+            config.set_default_profile(None)
+            return "Default user cleared. Subsequent calls will use the default API key from .env"
+
+        api_key = config.get_user_api_key(profile_name)
+        if not api_key:
+            profiles = config.list_user_profiles()
+            available = "\n".join([f"- {name}" for name in profiles.keys()]) or "(no profiles configured)"
+            return f"Profile not found: '{profile_name}'\n\nAvailable profiles:\n{available}"
+
+        config.set_default_profile(profile_name)
+        return f"Current user set to '{profile_name}'. All subsequent calls will use this profile by default."
+    except Exception as e:
+        return f"Error setting current user: {str(e)}"
+
+
+@mcp.tool()
+def get_current_user() -> str:
+    """Get the currently configured default Redmine user"""
+    try:
+        config = get_config()
+        profile = config.default_profile_name
+        if not profile:
+            return "No default user is set. Using the default API key from .env"
+        api_key = config.get_user_api_key(profile)
+        if not api_key:
+            return f"Default user is set to '{profile}', but this profile was not found in users.json"
+        return f"Current user: '{profile}'"
+    except Exception as e:
+        return f"Error getting current user: {str(e)}"
+
 
 @mcp.tool()
 def server_info() -> str:
@@ -32,11 +112,11 @@ def server_info() -> str:
 
 
 @mcp.tool()
-def health_check() -> str:
+def health_check(profile_name: str = None) -> str:
     """Health check tool to confirm that the server is functioning properly"""
     try:
         config = get_config()
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
         # Test connection
         if client.test_connection():
             return f"✓ The server is functioning normally and connected to {config.redmine_domain}"
@@ -47,7 +127,7 @@ def health_check() -> str:
 
 
 @mcp.tool()
-def get_issue(issue_id: int, include_details: bool = True) -> str:
+def get_issue(issue_id: int, include_details: bool = True, profile_name: str = None) -> str:
     """
     Get specific Redmine issue details
     
@@ -59,7 +139,7 @@ def get_issue(issue_id: int, include_details: bool = True) -> str:
         Detailed information about the issue, presented in an easy-to-read format
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
         include_params = []
         if include_details:
             include_params = ['attachments', 'changesets', 'children', 'journals', 'relations', 'watchers']
@@ -193,7 +273,7 @@ def get_issue(issue_id: int, include_details: bool = True) -> str:
 
 
 @mcp.tool()
-def update_issue_status(issue_id: int, status_id: int = None, status_name: str = None, notes: str = "") -> str:
+def update_issue_status(issue_id: int, status_id: int = None, status_name: str = None, notes: str = "", profile_name: str = None) -> str:
     """
     Update issue status
     
@@ -207,7 +287,7 @@ def update_issue_status(issue_id: int, status_id: int = None, status_name: str =
         Update result message
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
         
         # Processing status parameters
         final_status_id = status_id
@@ -247,7 +327,7 @@ New status: {updated_issue.status.get('name', 'N/A')}"""
 
 
 @mcp.tool()
-def list_project_issues(project_id: int, status_filter: str = "open", limit: int = 20) -> str:
+def list_project_issues(project_id: int, status_filter: str = "open", limit: int = 20, profile_name: str = None) -> str:
     """
     List project topics
     
@@ -260,7 +340,7 @@ def list_project_issues(project_id: int, status_filter: str = "open", limit: int
         List of project issues, presented in table format
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
         
         # limit limit range
         limit = min(max(limit, 1), 100)
@@ -317,7 +397,7 @@ Found {len(issues)} issues:
 
 
 @mcp.tool()
-def get_issue_statuses() -> str:
+def get_issue_statuses(profile_name: str = None) -> str:
     """
     Get a list of all available issue statuses
     
@@ -325,7 +405,7 @@ def get_issue_statuses() -> str:
         Formatted status list
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
         statuses = client.get_issue_statuses()
         
         if not statuses:
@@ -348,7 +428,7 @@ def get_issue_statuses() -> str:
 
 
 @mcp.tool()
-def get_trackers() -> str:
+def get_trackers(profile_name: str = None) -> str:
     """
     Get a list of all available trackers
     
@@ -356,7 +436,7 @@ def get_trackers() -> str:
         Formatted tracker list
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
         trackers = client.get_trackers()
         
         if not trackers:
@@ -379,7 +459,7 @@ def get_trackers() -> str:
 
 
 @mcp.tool()
-def get_priorities() -> str:
+def get_priorities(profile_name: str = None) -> str:
     """
     Get a priority list of all available issues
     
@@ -387,7 +467,7 @@ def get_priorities() -> str:
         Formatted priority list
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
         priorities = client.get_priorities()
         
         if not priorities:
@@ -410,7 +490,7 @@ def get_priorities() -> str:
 
 
 @mcp.tool()
-def get_time_entry_activities() -> str:
+def get_time_entry_activities(profile_name: str = None) -> str:
     """
     Get a list of all available time tracking activities
     
@@ -418,7 +498,7 @@ def get_time_entry_activities() -> str:
         Formatted time tracking activity list
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
         activities = client.get_time_entry_activities()
         
         if not activities:
@@ -441,7 +521,7 @@ def get_time_entry_activities() -> str:
 
 
 @mcp.tool()
-def get_document_categories() -> str:
+def get_document_categories(profile_name: str = None) -> str:
     """
     Get a list of all available file categories
     
@@ -449,7 +529,7 @@ def get_document_categories() -> str:
         Formatted file classification list
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
         categories = client.get_document_categories()
         
         if not categories:
@@ -472,7 +552,7 @@ def get_document_categories() -> str:
 
 
 @mcp.tool()
-def get_issue_categories(project_id: int) -> str:
+def get_issue_categories(project_id: int, profile_name: str = None) -> str:
     """
     Obtain the issue classification list of the specified project
 
@@ -485,7 +565,7 @@ def get_issue_categories(project_id: int) -> str:
         Formatted issue category list
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
         categories = client.get_issue_categories(project_id)
 
         if not categories:
@@ -507,7 +587,7 @@ def get_issue_categories(project_id: int) -> str:
 
 
 @mcp.tool()
-def get_projects() -> str:
+def get_projects(profile_name: str = None) -> str:
     """
     Get a list of accessible projects
     
@@ -515,7 +595,7 @@ def get_projects() -> str:
         Formatted project list
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
         projects = client.list_projects(limit=50)
         
         if not projects:
@@ -539,7 +619,7 @@ def get_projects() -> str:
 
 
 @mcp.tool()
-def search_issues(query: str, project_id: int = None, limit: int = 10) -> str:
+def search_issues(query: str, project_id: int = None, limit: int = 10, profile_name: str = None) -> str:
     """
     Search for issues (search keywords in title or description)
     
@@ -555,7 +635,7 @@ def search_issues(query: str, project_id: int = None, limit: int = 10) -> str:
         if not query.strip():
             return "Please provide search keywords"
         
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
         limit = min(max(limit, 1), 50)
         
         # Set search parameters
@@ -616,7 +696,7 @@ def update_issue_content(issue_id: int, subject: str = None, description: str = 
                         parent_issue_id: int = None, remove_parent: bool = False, start_date: str = None, due_date: str = None,
                         estimated_hours: float = None,
                         category_id: int = None, category_name: str = None,
-                        custom_fields: list[dict] = None) -> str:
+                        custom_fields: list[dict] = None, profile_name: str = None) -> str:
     """
     Update issue content (title, description, priority, completion, tracker, category, date, hours, custom fields, etc.)
 
@@ -642,7 +722,7 @@ def update_issue_content(issue_id: int, subject: str = None, description: str = 
         Update result message
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
         
         # Prepare to update information
         update_data = {}
@@ -772,7 +852,7 @@ Current status:
 @mcp.tool()
 def add_issue_note(issue_id: int, notes: str, private: bool = False, 
                    spent_hours: float = None, activity_name: str = None, 
-                   activity_id: int = None, spent_on: str = None) -> str:
+                   activity_id: int = None, spent_on: str = None, profile_name: str = None) -> str:
     """
     Add notes to the topic and record the time at the same time
     
@@ -792,7 +872,7 @@ def add_issue_note(issue_id: int, notes: str, private: bool = False,
         if not notes.strip():
             return "Error: Note content cannot be empty"
         
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
         time_entry_id = None
         
         # Processing time record
@@ -864,7 +944,7 @@ Time record added successfully!
 
 
 @mcp.tool()
-def assign_issue(issue_id: int, user_id: int = None, user_name: str = None, user_login: str = None, notes: str = "") -> str:
+def assign_issue(issue_id: int, user_id: int = None, user_name: str = None, user_login: str = None, notes: str = "", profile_name: str = None) -> str:
     """
     Assign issues to users
     
@@ -879,7 +959,7 @@ def assign_issue(issue_id: int, user_id: int = None, user_name: str = None, user
         Assignment result message
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
         
         # Handle user parameters
         final_user_id = user_id
@@ -941,7 +1021,7 @@ def create_new_issue(project_id: int, subject: str, description: str = "",
                     assigned_to_id: int = None, assigned_to_name: str = None, assigned_to_login: str = None,
                     parent_issue_id: int = None, start_date: str = None, due_date: str = None,
                     estimated_hours: float = None, status_id: int = None, status_name: str = None,
-                    category_id: int = None, category_name: str = None) -> str:
+                    category_id: int = None, category_name: str = None, profile_name: str = None) -> str:
     """
     Create a new Redmine issue
 
@@ -979,7 +1059,7 @@ def create_new_issue(project_id: int, subject: str, description: str = "",
         if not subject.strip():
             return "Error: Issue title cannot be empty"
         
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
         
         # Handling tracker parameters
         final_tracker_id = tracker_id
@@ -1087,7 +1167,7 @@ Assigned to: {new_issue.assigned_to.get('name', 'Not assigned') if new_issue.ass
 
 
 @mcp.tool()
-def get_my_issues(status_filter: str = "open", limit: int = 20) -> str:
+def get_my_issues(status_filter: str = "open", limit: int = 20, profile_name: str = None) -> str:
     """
     Get a list of issues assigned to me
     
@@ -1099,7 +1179,7 @@ def get_my_issues(status_filter: str = "open", limit: int = 20) -> str:
         My issue list
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
         
         # Get current user information first
         current_user = client.get_current_user()
@@ -1153,7 +1233,7 @@ Found {len(issues)} issues:
 
 
 @mcp.tool()
-def close_issue(issue_id: int, notes: str = "", done_ratio: int = 100) -> str:
+def close_issue(issue_id: int, notes: str = "", done_ratio: int = 100, profile_name: str = None) -> str:
     """
     Close the issue (set to completed status)
     
@@ -1166,7 +1246,7 @@ def close_issue(issue_id: int, notes: str = "", done_ratio: int = 100) -> str:
         Close results message
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
         
         # Get a list of available states and look for closed states
         statuses = client.get_issue_statuses()
@@ -1222,8 +1302,7 @@ def resolve_issue(
     done_ratio: int = 100,
     spent_hours: float = None,
     activity_name: str = None,
-    activity_id: int = None,
-) -> str:
+    activity_id: int = None, profile_name: str = None) -> str:
     """
     Mark issue as resolved (composite operation)
 
@@ -1255,7 +1334,7 @@ def resolve_issue(
         Resolution result message
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
 
         # parsing status
         final_status_id = status_id
@@ -1331,8 +1410,7 @@ def start_working(
     status_id: int = None,
     notes: str = "",
     set_start_date: bool = True,
-    assign_to_me: bool = True,
-) -> str:
+    assign_to_me: bool = True, profile_name: str = None) -> str:
     """
     Start processing an issue (composite operation)
 
@@ -1351,7 +1429,7 @@ def start_working(
         Operation result message
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
 
         # parsing status
         final_status_id = status_id
@@ -1398,7 +1476,7 @@ start date: {issue_data.get('start_date', 'N/A')}"""
 
 
 @mcp.tool()
-def check_issue_changes(issue_id: int) -> str:
+def check_issue_changes(issue_id: int, profile_name: str = None) -> str:
     """
     Detect changes to an issue since the last time it was read
 
@@ -1412,7 +1490,7 @@ def check_issue_changes(issue_id: int) -> str:
         Summary of changes or no change notification
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
         snapshot = client.get_issue_snapshot(issue_id)
 
         if not snapshot:
@@ -1527,7 +1605,7 @@ def check_issue_changes(issue_id: int) -> str:
 
 
 @mcp.tool()
-def sync_my_issues(project_id: int = None, status_filter: str = "open", limit: int = 20) -> str:
+def sync_my_issues(project_id: int = None, status_filter: str = "open", limit: int = 20, profile_name: str = None) -> str:
     """
     Batch detection of changes to topics assigned to me
 
@@ -1543,7 +1621,7 @@ def sync_my_issues(project_id: int = None, status_filter: str = "open", limit: i
         Change summaries for all issues assigned to me
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
 
         # Get current user ID
         current_user = client.get_current_user()
@@ -1641,7 +1719,7 @@ def sync_my_issues(project_id: int = None, status_filter: str = "open", limit: i
 
 
 @mcp.tool()
-def sync_project_issues(project_id: int, status_filter: str = "open") -> str:
+def sync_project_issues(project_id: int, status_filter: str = "open", profile_name: str = None) -> str:
     """
     Synchronize project issue structure and detect changes
 
@@ -1656,7 +1734,7 @@ def sync_project_issues(project_id: int, status_filter: str = "open") -> str:
         Project topic tree structure and change summary
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
 
         # Get all project issues in pages
         status_map = {'open': 'o', 'closed': 'c', 'all': '*', 'o': 'o', 'c': 'c', '*': '*'}
@@ -1750,14 +1828,14 @@ def sync_project_issues(project_id: int, status_filter: str = "open") -> str:
         new_ids = {issue.id for issue in new_issues}
         change_details = {issue.id: summaries for issue, summaries in changed_issues}
 
-        def get_marker(issue_id):
+        def get_marker(issue_id, profile_name: str = None):
             if issue_id in changed_ids:
                 return "🔄"
             elif issue_id in new_ids:
                 return "🆕"
             return "  "
 
-        def format_issue_line(issue, prefix=""):
+        def format_issue_line(issue, prefix="", profile_name: str = None):
             marker = get_marker(issue.id)
             tracker = issue.tracker.get('name', '') if hasattr(issue, 'tracker') and issue.tracker else ''
             status = issue.status.get('name', '') if issue.status else ''
@@ -1822,7 +1900,7 @@ def sync_project_issues(project_id: int, status_filter: str = "open") -> str:
 
 
 @mcp.tool()
-def search_users(query: str, limit: int = 10) -> str:
+def search_users(query: str, limit: int = 10, profile_name: str = None) -> str:
     """
     Search for users (by name or login name)
     
@@ -1837,7 +1915,7 @@ def search_users(query: str, limit: int = 10) -> str:
         if not query.strip():
             return "Please provide search keywords"
         
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
         limit = min(max(limit, 1), 50)
         
         users = client.search_users(query, limit)
@@ -1865,7 +1943,7 @@ def search_users(query: str, limit: int = 10) -> str:
 
 
 @mcp.tool()
-def list_users(limit: int = 20, status_filter: str = "active") -> str:
+def list_users(limit: int = 20, status_filter: str = "active", profile_name: str = None) -> str:
     """
     List all users
     
@@ -1877,7 +1955,7 @@ def list_users(limit: int = 20, status_filter: str = "active") -> str:
         List of users, presented in table format
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
         limit = min(max(limit, 1), 100)
         
         # Transition status filter
@@ -1913,7 +1991,7 @@ def list_users(limit: int = 20, status_filter: str = "active") -> str:
 
 
 @mcp.tool()
-def get_user(user_id: int) -> str:
+def get_user(user_id: int, profile_name: str = None) -> str:
     """
     Get details about a specific user
     
@@ -1924,7 +2002,7 @@ def get_user(user_id: int) -> str:
         User details, presented in an easy-to-read format
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
         user_data = client.get_user(user_id)
         
         # Format user information
@@ -1960,7 +2038,7 @@ def get_user(user_id: int) -> str:
 
 
 @mcp.tool()
-def add_watcher(issue_id: int, user_id: int = None, user_name: str = None, user_login: str = None) -> str:
+def add_watcher(issue_id: int, user_id: int = None, user_name: str = None, user_login: str = None, profile_name: str = None) -> str:
     """
     Add topic observer
 
@@ -1974,7 +2052,7 @@ def add_watcher(issue_id: int, user_id: int = None, user_name: str = None, user_
         Operation result message
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
 
         # Parse user ID
         final_user_id = user_id
@@ -2002,7 +2080,7 @@ def add_watcher(issue_id: int, user_id: int = None, user_name: str = None, user_
 
 
 @mcp.tool()
-def remove_watcher(issue_id: int, user_id: int = None, user_name: str = None, user_login: str = None) -> str:
+def remove_watcher(issue_id: int, user_id: int = None, user_name: str = None, user_login: str = None, profile_name: str = None) -> str:
     """
     Remove issue observer
 
@@ -2016,7 +2094,7 @@ def remove_watcher(issue_id: int, user_id: int = None, user_name: str = None, us
         Operation result message
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
 
         # Parse user ID
         final_user_id = user_id
@@ -2044,7 +2122,7 @@ def remove_watcher(issue_id: int, user_id: int = None, user_name: str = None, us
 
 
 @mcp.tool()
-def refresh_cache() -> str:
+def refresh_cache(profile_name: str = None) -> str:
     """
     Manually refresh enumeration values and user cache
     
@@ -2052,7 +2130,7 @@ def refresh_cache() -> str:
         Refresh result message
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
         client.refresh_cache()
         
         # Get cache information
@@ -2088,7 +2166,7 @@ Cache location: {client._cache_file}"""
 
 
 @mcp.tool()
-def list_issue_journals(issue_id: int, include_property_changes: bool = False) -> str:
+def list_issue_journals(issue_id: int, include_property_changes: bool = False, profile_name: str = None) -> str:
     """
     List all notes/log records for the issue
     
@@ -2100,7 +2178,7 @@ def list_issue_journals(issue_id: int, include_property_changes: bool = False) -
         List of topic notes, including Journal ID, author, time, and content
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
         journals = client.get_issue_journals(issue_id)
         
         if not journals:
@@ -2158,7 +2236,7 @@ def list_issue_journals(issue_id: int, include_property_changes: bool = False) -
 
 
 @mcp.tool()
-def get_journal(issue_id: int, journal_id: int) -> str:
+def get_journal(issue_id: int, journal_id: int, profile_name: str = None) -> str:
     """
     Get details about specific comments in an issue
     
@@ -2170,7 +2248,7 @@ def get_journal(issue_id: int, journal_id: int) -> str:
         Detailed information of the note, including author, time, content, attribute changes, etc.
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
         journals = client.get_issue_journals(issue_id)
         
         # Find the specified journal
@@ -2263,8 +2341,7 @@ LEGACY_OFFICE_EXTENSIONS = {'.doc', '.xls', '.ppt'}
 def get_attachment_image(
     attachment_id: int,
     thumbnail: bool = True,
-    max_size: int = DEFAULT_THUMBNAIL_SIZE
-):
+    max_size: int = DEFAULT_THUMBNAIL_SIZE, profile_name: str = None):
     """
     Download the Redmine attachment image for AI visual analysis
     
@@ -2280,7 +2357,7 @@ def get_attachment_image(
         from io import BytesIO
         from PIL import Image as PILImage
         
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
         
         # Download attachment
         image_data, attachment_info = client.download_attachment(attachment_id)
@@ -2462,8 +2539,7 @@ def _try_decode_text(data: bytes) -> str | None:
 @mcp.tool()
 def get_attachment_text(
     attachment_id: int,
-    max_length: int = MAX_TEXT_OUTPUT_LENGTH
-) -> str:
+    max_length: int = MAX_TEXT_OUTPUT_LENGTH, profile_name: str = None) -> str:
     """
     Read the text content of Redmine attachments
 
@@ -2482,7 +2558,7 @@ def get_attachment_text(
         Attachment text or error message
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
 
         # Download attachment
         file_data, attachment_info = client.download_attachment(attachment_id)
@@ -2572,7 +2648,7 @@ def get_attachment_text(
 
 
 @mcp.tool()
-def get_attachment_info(attachment_id: int) -> str:
+def get_attachment_info(attachment_id: int, profile_name: str = None) -> str:
     """
     Get attachment details (without downloading file contents)
     
@@ -2583,7 +2659,7 @@ def get_attachment_info(attachment_id: int) -> str:
         Attachment details
     """
     try:
-        client = get_client()
+        client = get_client(api_key=_resolve_user(profile_name))
         attachment = client.get_attachment(attachment_id)
         
         filesize = attachment.get('filesize', 0)

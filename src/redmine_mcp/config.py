@@ -3,8 +3,10 @@ Configuration management module
 Responsible for loading and validating environment variable configurations
 """
 
+import json
 import os
-from typing import Optional
+from pathlib import Path
+from typing import Optional, Dict, Any
 from dotenv import load_dotenv
 
 
@@ -18,6 +20,11 @@ class RedmineConfig:
         # Required configuration
         self.redmine_domain = self._get_required_env("REDMINE_DOMAIN")
         self.redmine_api_key = self._get_required_env("REDMINE_API_KEY")
+
+        # User profiles configuration
+        self._users_file_path = Path.home() / ".redmine_mcp" / "users.json"
+        self._user_profiles: Optional[Dict[str, Dict[str, Any]]] = None
+        self._default_profile_name: Optional[str] = os.getenv("REDMINE_DEFAULT_PROFILE") or None
 
         # Optional configuration - use dedicated prefix to avoid conflicts with other projects
         self.redmine_timeout = int(os.getenv("REDMINE_MCP_TIMEOUT") or os.getenv("REDMINE_TIMEOUT") or "30")
@@ -59,6 +66,69 @@ class RedmineConfig:
         if not value:
             raise ValueError(f"Required environment variable {key} is not set")
         return value
+
+    def _load_user_profiles(self) -> Dict[str, Dict[str, Any]]:
+        """Load user profiles from the configuration file"""
+        if self._user_profiles is not None:
+            return self._user_profiles
+
+        if not self._users_file_path.exists():
+            self._user_profiles = {}
+            return self._user_profiles
+
+        try:
+            with open(self._users_file_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            # Normalize to dict of dicts
+            profiles: Dict[str, Dict[str, Any]] = {}
+            for name, value in data.items():
+                if isinstance(value, dict) and 'api_key' in value:
+                    profiles[name] = {
+                        'api_key': value['api_key'],
+                        'description': value.get('description', '')
+                    }
+                elif isinstance(value, str):
+                    # Simple string mapping: name -> api_key
+                    profiles[name] = {'api_key': value, 'description': ''}
+            self._user_profiles = profiles
+        except (json.JSONDecodeError, OSError):
+            self._user_profiles = {}
+
+        return self._user_profiles
+
+    def get_user_api_key(self, user_name: str) -> Optional[str]:
+        """Get API key for a named user profile"""
+        profiles = self._load_user_profiles()
+        profile = profiles.get(user_name)
+        if profile:
+            return profile.get('api_key')
+        return None
+
+    def list_user_profiles(self) -> Dict[str, str]:
+        """List available user profiles (name -> description, excluding API keys)"""
+        profiles = self._load_user_profiles()
+        return {
+            name: profile.get('description', '')
+            for name, profile in profiles.items()
+        }
+
+    def refresh_user_profiles(self) -> None:
+        """Force reload user profiles from disk"""
+        self._user_profiles = None
+
+    @property
+    def default_profile_name(self) -> Optional[str]:
+        """Return the current default profile name (from env or set_current_user)"""
+        return self._default_profile_name
+
+    def set_default_profile(self, profile_name: Optional[str]) -> None:
+        """Set the default profile name for this server instance"""
+        self._default_profile_name = profile_name
+
+    @property
+    def users_file_path(self) -> Path:
+        """Return the path to the user profiles file"""
+        return self._users_file_path
 
     def _validate_config(self) -> None:
         """Validate configuration values"""

@@ -94,6 +94,102 @@ class TestRedmineConfig:
             assert 'secret_api_key' not in repr_str  # Sensitive information should be hidden
 
 
+class TestUserProfiles:
+    """Test user profile loading and lookup"""
+
+    def test_load_user_profiles_dict_format(self, tmp_path):
+        """Test loading user profiles from JSON dict format"""
+        reload_config()
+        profiles_file = tmp_path / "users.json"
+        profiles_file.write_text('{"alice": {"api_key": "key123", "description": "PM"}, "bob": {"api_key": "key456"}}')
+        
+        with patch.dict(os.environ, {
+            'REDMINE_DOMAIN': 'https://test.redmine.com',
+            'REDMINE_API_KEY': 'test_api_key'
+        }):
+            config = RedmineConfig()
+            config._users_file_path = profiles_file
+            config._user_profiles = None  # Force reload
+            
+            assert config.get_user_api_key('alice') == 'key123'
+            assert config.get_user_api_key('bob') == 'key456'
+            assert config.get_user_api_key('unknown') is None
+            
+            profiles = config.list_user_profiles()
+            assert profiles == {'alice': 'PM', 'bob': ''}
+
+    def test_load_user_profiles_string_format(self, tmp_path):
+        """Test loading user profiles from JSON string format"""
+        reload_config()
+        profiles_file = tmp_path / "users.json"
+        profiles_file.write_text('{"alice": "key123", "bob": "key456"}')
+        
+        with patch.dict(os.environ, {
+            'REDMINE_DOMAIN': 'https://test.redmine.com',
+            'REDMINE_API_KEY': 'test_api_key'
+        }):
+            config = RedmineConfig()
+            config._users_file_path = profiles_file
+            config._user_profiles = None
+            
+            assert config.get_user_api_key('alice') == 'key123'
+            profiles = config.list_user_profiles()
+            assert 'alice' in profiles
+            assert profiles['alice'] == ''
+
+    def test_load_user_profiles_missing_file(self, tmp_path):
+        """Test loading when profiles file does not exist"""
+        reload_config()
+        with patch.dict(os.environ, {
+            'REDMINE_DOMAIN': 'https://test.redmine.com',
+            'REDMINE_API_KEY': 'test_api_key'
+        }):
+            config = RedmineConfig()
+            config._users_file_path = tmp_path / "nonexistent.json"
+            config._user_profiles = None
+            
+            assert config.list_user_profiles() == {}
+            assert config.get_user_api_key('anyone') is None
+
+    def test_load_user_profiles_malformed_json(self, tmp_path):
+        """Test loading when profiles file contains malformed JSON"""
+        reload_config()
+        profiles_file = tmp_path / "users.json"
+        profiles_file.write_text('not json at all')
+        
+        with patch.dict(os.environ, {
+            'REDMINE_DOMAIN': 'https://test.redmine.com',
+            'REDMINE_API_KEY': 'test_api_key'
+        }):
+            config = RedmineConfig()
+            config._users_file_path = profiles_file
+            config._user_profiles = None
+            
+            assert config.list_user_profiles() == {}
+
+    def test_refresh_user_profiles(self, tmp_path):
+        """Test refresh_user_profiles forces reload"""
+        reload_config()
+        profiles_file = tmp_path / "users.json"
+        profiles_file.write_text('{"alice": "key123"}')
+        
+        with patch.dict(os.environ, {
+            'REDMINE_DOMAIN': 'https://test.redmine.com',
+            'REDMINE_API_KEY': 'test_api_key'
+        }):
+            config = RedmineConfig()
+            config._users_file_path = profiles_file
+            config._user_profiles = None
+            
+            assert config.get_user_api_key('alice') == 'key123'
+            
+            # Update file
+            profiles_file.write_text('{"alice": "key999"}')
+            config.refresh_user_profiles()
+            
+            assert config.get_user_api_key('alice') == 'key999'
+
+
 class TestConfigSingleton:
     """Test configuration singleton pattern"""
 

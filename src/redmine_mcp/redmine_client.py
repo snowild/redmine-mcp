@@ -68,20 +68,25 @@ class RedmineAPIError(Exception):
 class RedmineClient:
     """Redmine API client"""
     
-    def __init__(self):
+    def __init__(self, api_key: Optional[str] = None):
         self.config = get_config()
+        self.api_key = api_key or self.config.redmine_api_key
         self.session = requests.Session()
         self.session.headers.update(self.config.api_headers)
+        # Override API key if a custom one is provided
+        if api_key:
+            self.session.headers['X-Redmine-API-Key'] = api_key
         self.session.timeout = self.config.redmine_timeout
         
         # Cache-related settings
         self.cache_dir = Path.home() / ".redmine_mcp"
         self.cache_dir.mkdir(exist_ok=True)
         
-        # Create a unique cache file name based on domain
+        # Create a unique cache file name based on domain and API key
         domain_hash = hash(self.config.redmine_domain)
         safe_domain = self.config.redmine_domain.replace('://', '_').replace('/', '_').replace(':', '_')
-        self._cache_file = self.cache_dir / f"cache_{safe_domain}_{abs(domain_hash)}.json"
+        key_hash = hash(self.api_key)
+        self._cache_file = self.cache_dir / f"cache_{safe_domain}_{abs(domain_hash)}_{abs(key_hash)}.json"
         self._enum_cache: Optional[Dict[str, Any]] = None
         self._category_cache: Dict[int, Dict[str, int]] = {}  # {project_id: {name: id}}
         self._issue_snapshots: Dict[int, Dict[str, Any]] = {}  # {issue_id: snapshot}
@@ -880,20 +885,21 @@ class RedmineClient:
             raise RedmineAPIError(f"Failed to download attachment: {str(e)}")
 
 
-# Global client instance
-_client: Optional[RedmineClient] = None
+# Global client registry: api_key -> RedmineClient
+_clients: Dict[str, RedmineClient] = {}
 
 
-def get_client() -> RedmineClient:
-    """Get global client instance (singleton pattern)"""
-    global _client
-    if _client is None:
-        _client = RedmineClient()
-    return _client
+def get_client(api_key: Optional[str] = None) -> RedmineClient:
+    """Get client instance for the given API key (cached per key)"""
+    global _clients
+    cache_key = api_key or "__default__"
+    if cache_key not in _clients:
+        _clients[cache_key] = RedmineClient(api_key=api_key)
+    return _clients[cache_key]
 
 
 def reload_client() -> RedmineClient:
-    """Reload client (mainly used for testing)"""
-    global _client
-    _client = None
+    """Reload all clients (mainly used for testing)"""
+    global _clients
+    _clients = {}
     return get_client()

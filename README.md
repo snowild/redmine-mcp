@@ -93,15 +93,114 @@ LOG_LEVEL=info
 
 > **Note**: The system automatically handles case conversion and ensures FastMCP compatibility.
 
-### 4. Redmine API Setup
+### 4. Multi-User Support (Optional)
 
-#### 4.1 Enable REST API
+The server supports named user profiles, allowing multiple agents/users to operate as different Redmine identities within a single MCP configuration.
+
+#### 4.1 Create User Profiles File
+
+Create `~/.redmine_mcp/users.json`:
+
+```json
+{
+  "alice": {
+    "api_key": "alice_redmine_api_key",
+    "description": "Project Manager"
+  },
+  "bob": {
+    "api_key": "bob_redmine_api_key",
+    "description": "Developer"
+  }
+}
+```
+
+Or use the simple string format:
+```json
+{
+  "alice": "alice_redmine_api_key",
+  "bob": "bob_redmine_api_key"
+}
+```
+
+#### 4.2 Using Profiles
+
+All MCP tools accept an optional `profile_name` parameter:
+
+```python
+# Act as alice
+get_issue(123, profile_name="alice")
+
+# Act as bob
+create_new_issue(project_id=1, subject="Bug fix", profile_name="bob")
+```
+
+If `profile_name` is omitted, the default `REDMINE_API_KEY` from `.env` is used.
+
+Use `list_user_profiles()` to see available profiles.
+
+> **Security Note**: Raw API keys are never exposed in tool arguments. Only pre-configured profile names are passed.
+
+#### Setting a Default User (Recommended)
+
+Instead of passing `profile_name` on every call, set a default user once per session:
+
+```python
+# 1. List available profiles
+list_user_profiles()
+
+# 2. Set yourself as the current user
+set_current_user(profile_name="Семён Слепоков")
+
+# 3. Now all calls use Семён's API key automatically
+get_issue(123)
+add_issue_note(issue_id=123, notes="Done")
+create_new_issue(project_id=1, subject="New task")
+
+# 4. Override for a single call if needed
+get_issue(456, profile_name="Валентина Петрова")
+
+# 5. Clear the default
+set_current_user(profile_name="")
+```
+
+You can also set a default profile via environment variable:
+```env
+REDMINE_DEFAULT_PROFILE=Семён Слепоков
+```
+
+> **Important for SSE mode**: `set_current_user` sets the default for the entire server process. If multiple agents connect to the same SSE server, they share the same default. For isolated sessions use stdio mode or run separate containers per user.
+
+#### Docker / Docker Compose
+
+When running in a container, mount the `users.json` file:
+
+```bash
+# Docker run
+docker run -d \
+  -e REDMINE_DOMAIN=https://your-redmine.com \
+  -e REDMINE_API_KEY=your_api_key \
+  -v $(pwd)/users.json:/home/mcp/.redmine_mcp/users.json:ro \
+  -p 8000:8000 \
+  --name redmine-mcp \
+  redmine-mcp
+```
+
+For Docker Compose, the `docker-compose.yml` already includes the volume mount. Just create `users.json` next to `docker-compose.yml`:
+
+```bash
+echo '{"alice": "alice_api_key", "bob": "bob_api_key"}' > users.json
+docker compose up -d
+```
+
+### 5. Redmine API Setup
+
+#### 5.1 Enable REST API
 1. Log in to Redmine as administrator
 2. Go to **Administration** → **Settings** → **API**
 3. Check **"Enable REST web service"**
 4. Click **Save**
 
-#### 4.2 Configure Redmine Basic Data (Administrator)
+#### 5.2 Configure Redmine Basic Data (Administrator)
 Before using MCP tools, you need to configure Redmine's basic data:
 
 **Configure Roles and Permissions**
@@ -130,7 +229,7 @@ Before using MCP tools, you need to configure Redmine's basic data:
 3. Select enabled modules (at least enable "Issue tracking")
 4. Assign members and set roles
 
-#### 4.3 Get API Key
+#### 5.3 Get API Key
 1. Log in to your Redmine system (can be administrator or regular user)
 2. Go to **My account** → **API access key**
 3. Click **Show** or **Reset** to get the API key
@@ -141,6 +240,44 @@ Before using MCP tools, you need to configure Redmine's basic data:
 > - Complete basic setup before you can properly create and manage issues
 > 
 > **📚 Detailed Setup Guide**: For complete Redmine setup steps, please refer to [Redmine Complete Setup Guide](docs/manuals/redmine_setup_guide.md)
+
+## 💬 Usage Examples in Chat
+
+### Acting as a Specific User
+
+**Recommended approach**: set the current user once, then work normally.
+
+```python
+# 1. List available profiles
+list_user_profiles()
+# → Available user profiles:
+#   - alice - Project Manager
+#   - bob - Developer
+
+# 2. Set yourself as the current user (one time per session)
+set_current_user(profile_name="alice")
+
+# 3. All subsequent calls automatically use alice's API key
+get_issue(123)
+create_new_issue(project_id=1, subject="[Bug] Login error")
+update_issue_status(issue_id=123, status_name="Resolved")
+get_my_issues(status_filter="open")
+
+# 4. Override for a single call if needed
+get_issue(456, profile_name="bob")
+
+# 5. Clear when done
+set_current_user(profile_name="")
+```
+
+**Alternative**: pass `profile_name` explicitly on every call (useful for one-off actions):
+
+```python
+get_issue(123, profile_name="alice")
+add_issue_note(issue_id=123, notes="Done", profile_name="bob")
+```
+
+> **Note**: `set_current_user` stores the default in the server's memory. In SSE mode with multiple agents sharing one server, they share the same default. For fully isolated sessions, use stdio mode or run separate containers.
 
 ## 🔗 Claude Code Integration
 
@@ -250,6 +387,25 @@ docker compose logs -f
 
 # Stop the service
 docker compose down
+```
+
+#### Docker with Multi-User Profiles
+
+```yaml
+# docker-compose.yml
+services:
+  redmine-mcp:
+    build: .
+    container_name: redmine-mcp
+    ports:
+      - "8000:8000"
+    environment:
+      - REDMINE_DOMAIN=${REDMINE_DOMAIN}
+      - REDMINE_API_KEY=${REDMINE_API_KEY}
+    volumes:
+      - ./users.json:/home/mcp/.redmine_mcp/users.json:ro
+    restart: unless-stopped
+```
 ```
 
 #### Docker Compose with .env file (Recommended)

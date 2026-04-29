@@ -5,7 +5,7 @@ MCP tool tests
 import os
 import pytest
 from unittest.mock import patch, Mock
-from redmine_mcp.server import get_issue, update_issue_status, update_issue_content, list_project_issues, health_check, get_trackers, get_priorities, get_time_entry_activities, get_document_categories
+from redmine_mcp.server import get_issue, update_issue_status, update_issue_content, list_project_issues, health_check, get_trackers, get_priorities, get_time_entry_activities, get_document_categories, list_user_profiles
 from redmine_mcp.redmine_client import RedmineIssue, RedmineProject
 
 
@@ -734,3 +734,96 @@ class TestMCPTools:
         
         # Validate call arguments
         mock_client.update_issue.assert_called_once_with(123, parent_issue_id=100)
+
+
+class TestMultiUserSupport:
+    """Test multi-user profile support"""
+
+    def test_list_user_profiles_empty(self):
+        """Test list_user_profiles when no profiles configured"""
+        with patch('redmine_mcp.server.get_config') as mock_get_config:
+            mock_config = Mock()
+            mock_config.list_user_profiles.return_value = {}
+            mock_get_config.return_value = mock_config
+
+            result = list_user_profiles()
+            assert "No user profiles configured" in result
+
+    def test_list_user_profiles_with_profiles(self):
+        """Test list_user_profiles returns configured profiles"""
+        with patch('redmine_mcp.server.get_config') as mock_get_config:
+            mock_config = Mock()
+            mock_config.list_user_profiles.return_value = {
+                'alice': 'Project Manager',
+                'bob': ''
+            }
+            mock_get_config.return_value = mock_config
+
+            result = list_user_profiles()
+            assert "Available user profiles:" in result
+            assert "alice" in result
+            assert "Project Manager" in result
+            assert "bob" in result
+
+    @patch('redmine_mcp.server.get_client')
+    def test_tool_with_valid_profile_name(self, mock_get_client):
+        """Test tool passes correct API key when profile_name is provided"""
+        mock_client = Mock()
+        mock_client.get_issue_raw.return_value = {
+            'id': 123,
+            'subject': 'Test',
+            'description': '',
+            'status': {'name': 'New'},
+            'priority': {'name': 'Normal'},
+            'project': {'name': 'Test Project', 'id': 1},
+            'tracker': {'name': 'Bug'},
+            'author': {'name': 'Test User'},
+        }
+        mock_get_client.return_value = mock_client
+
+        with patch('redmine_mcp.server.get_config') as mock_get_config:
+            mock_config = Mock()
+            mock_config.get_user_api_key.return_value = 'alice_api_key'
+            mock_get_config.return_value = mock_config
+
+            result = get_issue(123, profile_name='alice')
+
+            assert "Issue #123: Test" in result
+            mock_get_client.assert_called_once_with(api_key='alice_api_key')
+
+    @patch('redmine_mcp.server.get_client')
+    def test_tool_with_invalid_profile_name(self, mock_get_client):
+        """Test tool returns error when profile_name is not found"""
+        mock_client = Mock()
+        mock_get_client.return_value = mock_client
+
+        with patch('redmine_mcp.server.get_config') as mock_get_config:
+            mock_config = Mock()
+            mock_config.get_user_api_key.return_value = None
+            mock_get_config.return_value = mock_config
+
+            result = get_issue(123, profile_name='unknown_user')
+
+            assert "User profile not found" in result
+            assert "unknown_user" in result
+
+    @patch('redmine_mcp.server.get_client')
+    def test_tool_without_profile_name_uses_default(self, mock_get_client):
+        """Test tool uses default API key when profile_name is not provided"""
+        mock_client = Mock()
+        mock_client.get_issue_raw.return_value = {
+            'id': 123,
+            'subject': 'Test',
+            'description': '',
+            'status': {'name': 'New'},
+            'priority': {'name': 'Normal'},
+            'project': {'name': 'Test Project', 'id': 1},
+            'tracker': {'name': 'Bug'},
+            'author': {'name': 'Test User'},
+        }
+        mock_get_client.return_value = mock_client
+
+        result = get_issue(123)
+
+        assert "Issue #123: Test" in result
+        mock_get_client.assert_called_once_with(api_key=None)
