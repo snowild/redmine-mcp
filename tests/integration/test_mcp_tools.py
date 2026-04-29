@@ -18,7 +18,7 @@ class TestMCPTools:
         with patch.dict(os.environ, {
             'REDMINE_DOMAIN': 'https://test.redmine.com',
             'REDMINE_API_KEY': 'test_api_key'
-        }):
+        }, clear=True):
             pass
     
     @patch('redmine_mcp.server.get_config')
@@ -36,7 +36,7 @@ class TestMCPTools:
         with patch.dict(os.environ, {
             'REDMINE_DOMAIN': 'https://test.redmine.com',
             'REDMINE_API_KEY': 'test_api_key'
-        }):
+        }, clear=True):
             result = health_check()
         
         assert "✓ The server is functioning normally" in result
@@ -52,7 +52,7 @@ class TestMCPTools:
         with patch.dict(os.environ, {
             'REDMINE_DOMAIN': 'https://test.redmine.com',
             'REDMINE_API_KEY': 'test_api_key'
-        }):
+        }, clear=True):
             result = health_check()
         
         assert "✗ Unable to connect to Redmine server" in result

@@ -21,7 +21,7 @@ class TestAdvancedMCPTools:
         with patch.dict(os.environ, {
             'REDMINE_DOMAIN': 'https://test.redmine.com',
             'REDMINE_API_KEY': 'test_api_key'
-        }):
+        }, clear=True):
             pass
     
     @patch('redmine_mcp.server.get_client')

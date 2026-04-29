@@ -20,7 +20,7 @@ class TestRedmineClient:
         with patch.dict(os.environ, {
             'REDMINE_DOMAIN': 'https://test.redmine.com',
             'REDMINE_API_KEY': 'test_api_key'
-        }):
+        }, clear=True), patch('redmine_mcp.config.load_dotenv'):
             self.client = RedmineClient()
     
     def test_client_initialization(self):
@@ -224,21 +224,21 @@ class TestClientSingleton:
         with patch.dict(os.environ, {
             'REDMINE_DOMAIN': 'https://test.redmine.com',
             'REDMINE_API_KEY': 'test_api_key'
-        }):
+        }, clear=True), patch('redmine_mcp.config.load_dotenv'):
             client1 = get_client()
             client2 = get_client()
-            
+
             assert client1 is client2
-    
+
     def test_reload_client(self):
         """Test reload_client creates a new instance"""
         reload_client()
         with patch.dict(os.environ, {
             'REDMINE_DOMAIN': 'https://test.redmine.com',
             'REDMINE_API_KEY': 'test_api_key'
-        }):
+        }, clear=True), patch('redmine_mcp.config.load_dotenv'):
             client1 = get_client()
             client2 = reload_client()
-            
+
             assert client1 is not client2
             assert client1.config.redmine_domain == client2.config.redmine_domain
