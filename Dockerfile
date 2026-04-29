@@ -1,57 +1,57 @@
 # Redmine MCP Server Dockerfile
-# 多階段建置以減少最終映像大小
+# Multi-stage build to reduce final image size
 
-# ===== 建置階段 =====
+# ===== Build stage =====
 FROM python:3.12-slim AS builder
 
-# 安裝 uv 套件管理器
+# Install uv package manager
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# 設定工作目錄
+# Set working directory
 WORKDIR /app
 
-# 複製專案檔案
+# Copy project files
 COPY pyproject.toml uv.lock README.md ./
 COPY src/ ./src/
 
-# 使用 uv 安裝依賴到虛擬環境
+# Use uv to install dependencies into virtual environment
 RUN uv sync --frozen --no-dev
 
-# ===== 執行階段 =====
+# ===== Runtime stage =====
 FROM python:3.12-slim AS runtime
 
-# 安裝 curl（用於健康檢查）
+# Install curl (for health checks)
 RUN apt-get update && apt-get install -y --no-install-recommends curl \
     && rm -rf /var/lib/apt/lists/*
 
-# 建立非 root 用戶
+# Create non-root user
 RUN useradd --create-home --shell /bin/bash mcp
 
-# 設定工作目錄
+# Set working directory
 WORKDIR /app
 
-# 從建置階段複製虛擬環境和原始碼
+# Copy virtual environment and source code from build stage
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app/src /app/src
 
-# 設定環境變數
+# Set environment variables
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
 
-# 預設 SSE 配置
+# Default SSE configuration
 ENV REDMINE_MCP_TRANSPORT=sse
 ENV REDMINE_MCP_HOST=0.0.0.0
 ENV REDMINE_MCP_PORT=8000
 
-# 切換到非 root 用戶
+# Switch to non-root user
 USER mcp
 
-# 暴露 SSE 預設埠
+# Expose default SSE port
 EXPOSE 8000
 
-# 健康檢查（檢查 SSE endpoint 是否回應）
+# Health check (check if SSE endpoint responds)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -sf http://localhost:8000/sse --max-time 5 > /dev/null || exit 1
 
-# 啟動服務
+# Start service
 CMD ["python", "-m", "redmine_mcp.server", "--transport", "sse"]

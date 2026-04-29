@@ -1,138 +1,138 @@
-# Redmine 測試環境說明
+# Redmine Test Environment Guide
 
-本目錄包含了 Redmine MCP 專案的所有 Redmine 相關設定和管理工具。
+This directory contains all Redmine-related settings and management tools for the Redmine MCP project.
 
-## 📁 目錄結構
+## 📁 Directory Structure
 
 ```
 redmine/
-├── docker/                    # Docker 相關設定
-│   ├── docker-compose.yml     # MySQL 8.0 + Redmine 5.1 容器配置
-│   └── init/                  # Docker 初始化腳本目錄
-├── scripts/                   # 設定和管理腳本
-│   ├── setup.sh              # 啟動 Redmine 環境
-│   ├── configure.py           # 自動建立測試資料和 API 金鑰
-│   ├── manual_api_setup.py    # 手動 API 設定和測試
-│   └── enable_rest_api.py     # 啟用 REST API 功能
-├── docs/                      # 設定說明文檔
-│   ├── README.md             # 本檔案 - 總覽說明
-│   ├── setup.md              # 詳細設定步驟
-│   └── api.md                # API 使用說明
-└── configs/                   # 配置模板
-    └── .env.example          # 環境變數範例
+├── docker/                    # Docker-related settings
+│   ├── docker-compose.yml     # MySQL 8.0 + Redmine 5.1 container configuration
+│   └── init/                  # Docker initialization script directory
+├── scripts/                   # Configuration and management scripts
+│   ├── setup.sh              # Start Redmine environment
+│   ├── configure.py           # Auto-create test data and API key
+│   ├── manual_api_setup.py    # Manual API setup and testing
+│   └── enable_rest_api.py     # Enable REST API functionality
+├── docs/                      # Setup documentation
+│   ├── README.md             # This file - overview
+│   ├── setup.md              # Detailed setup steps
+│   └── api.md                # API usage guide
+└── configs/                   # Configuration templates
+    └── .env.example          # Environment variable examples
 ```
 
-## 🚀 快速開始
+## 🚀 Quick Start
 
-### 一鍵啟動（推薦）
+### One-Click Start (Recommended)
 
 ```bash
-# 從專案根目錄執行
+# Run from project root
 ./redmine/scripts/setup.sh
 ```
 
-### 完整設定流程
+### Complete Setup Process
 
 ```bash
-# 1. 啟動 Redmine 環境
+# 1. Start Redmine environment
 ./redmine/scripts/setup.sh
 
-# 2. 自動配置測試資料
+# 2. Auto-configure test data
 cd redmine/scripts
 python configure.py
 
-# 3. 測試 API 連接
+# 3. Test API connection
 python manual_api_setup.py
 ```
 
-## 🌐 服務資訊
+## 🌐 Service Information
 
-### Redmine 實例
+### Redmine Instance
 - **URL**: http://localhost:3000
-- **管理員帳號**: admin
-- **管理員密碼**: admin
-- **版本**: Redmine 5.1
+- **Admin username**: admin
+- **Admin password**: admin
+- **Version**: Redmine 5.1
 
-### 資料庫
-- **類型**: MySQL 8.0
-- **容器名稱**: redmine-mysql
-- **內部端口**: 3306
+### Database
+- **Type**: MySQL 8.0
+- **Container name**: redmine-mysql
+- **Internal port**: 3306
 
-### Docker 容器
-- **redmine-app**: Redmine 應用服務 (端口 3000)
-- **redmine-mysql**: MySQL 資料庫服務
+### Docker Containers
+- **redmine-app**: Redmine application service (port 3000)
+- **redmine-mysql**: MySQL database service
 
-## 📝 配置說明
+## 📝 Configuration Guide
 
-### 環境變數
-參考 `configs/.env.example` 建立你的 `.env` 檔案：
+### Environment Variables
+Refer to `configs/.env.example` to create your `.env` file:
 
 ```bash
-# 複製範例檔案
+# Copy example file
 cp redmine/configs/.env.example .env
 
-# 編輯配置
+# Edit configuration
 vim .env
 ```
 
-### 測試資料
-自動配置腳本會建立：
-- 3 個測試專案
-- 每個專案 5 個測試議題
-- API 金鑰設定
+### Test Data
+The auto-configuration script will create:
+- 3 test projects
+- 5 test issues per project
+- API key configuration
 
-## 🔧 管理指令
+## 🔧 Management Commands
 
-### 環境控制
+### Environment Control
 ```bash
-# 啟動服務
+# Start services
 cd redmine/docker
 docker-compose up -d
 
-# 檢查狀態
+# Check status
 docker-compose ps
 
-# 查看日誌
+# View logs
 docker-compose logs redmine
 
-# 停止服務
+# Stop services
 docker-compose down
 
-# 完全清理（包含資料）
+# Full cleanup (including data)
 docker-compose down -v
 ```
 
-### 重新設定
+### Reconfigure
 ```bash
-# 重設 Redmine 環境
+# Reset Redmine environment
 cd redmine/docker
 docker-compose down -v
 cd ../scripts
 ./setup.sh
 ```
 
-## 🧪 測試驗證
+## 🧪 Testing and Verification
 
-### API 連接測試
+### API Connection Test
 ```bash
 cd redmine/scripts
 python manual_api_setup.py
 ```
 
-### MCP 功能測試
+### MCP Functionality Test
 ```bash
-# 從專案根目錄執行
+# Run from project root
 python tests/scripts/mcp_integration.py
 ```
 
-## 📚 更多說明
+## 📚 More Documentation
 
-- [詳細設定步驟](setup.md) - 完整的環境建置說明
-- [API 使用指南](api.md) - Redmine REST API 參考
+- [Detailed Setup Steps](setup.md) - Complete environment setup guide
+- [API Usage Guide](api.md) - Redmine REST API reference
 
-## ⚠️ 注意事項
+## ⚠️ Notes
 
-- 此環境僅供開發和測試使用
-- 首次啟動需要約 60-90 秒進行資料庫初始化
-- 請確保端口 3000 未被其他服務佔用
-- 測試完成後請記得停止 Docker 容器以節省資源
+- This environment is for development and testing only
+- First startup takes about 60-90 seconds for database initialization
+- Please ensure port 3000 is not used by other services
+- Please remember to stop Docker containers after testing to save resources

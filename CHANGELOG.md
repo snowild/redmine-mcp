@@ -23,9 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **get_issue output format**: Reformatted to Markdown table format aligned with team documentation standards
   - Emoji markers for tracker, status, priority
-  - Field naming aligned with README (`完成百分比`, `開始時間`, `結束時間`)
+  - Field naming aligned with README (`Completion Percentage`, `Start Time`, `End Time`)
   - `@username` format for assignee
-  - Dedicated rows for custom fields: `實際結束日期` (id=23), `解決日期` (id=64)
+  - Dedicated rows for custom fields: `Actual End Date` (id=23), `Resolution Date` (id=64)
   - Status column added to children issue table
 
 ### Fixed

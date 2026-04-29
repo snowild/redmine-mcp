@@ -1,286 +1,286 @@
-# Redmine 完整設定指南
+# Redmine Complete Setup Guide
 
-本指南提供詳細的 Redmine 初始化設定步驟，確保能夠正常使用 redmine-mcp 工具。
+This guide provides detailed Redmine initialization setup steps to ensure the redmine-mcp tools can be used properly.
 
-## 🎯 設定概覽
+## 🎯 Setup Overview
 
-Redmine 設定需要以下步驟：
-1. ✅ 啟用 REST API
-2. ✅ 設定系統基本資料
-3. ✅ 建立專案
-4. ✅ 取得 API 金鑰
+Redmine setup requires the following steps:
+1. ✅ Enable REST API
+2. ✅ Configure system basic data
+3. ✅ Create projects
+4. ✅ Get API key
 
-## 📋 詳細設定步驟
+## 📋 Detailed Setup Steps
 
-### 1. 啟用 REST API
-> **必須以管理員身份執行**
+### 1. Enable REST API
+> **Must be performed as administrator**
 
-1. 登入 Redmine 管理介面
-2. 前往 **管理** → **設定** → **API**
-3. 勾選 **「啟用 REST 網路服務技術（Web Service）」**
-4. 點擊 **儲存**
+1. Log in to the Redmine admin interface
+2. Go to **Administration** → **Settings** → **API**
+3. Check **"Enable REST web service (Web Service)"**
+4. Click **Save**
 
-### 2. 設定角色與權限
-> **建議的最小權限設定**
+### 2. Configure Roles and Permissions
+> **Recommended minimum permission settings**
 
-**建立角色**
-1. 前往 **管理** → **角色與權限**
-2. 點擊 **新增角色**
-3. 建立以下角色：
+**Create Roles**
+1. Go to **Administration** → **Roles and permissions**
+2. Click **New role**
+3. Create the following roles:
 
-| 角色名稱 | 建議權限 |
+| Role Name | Recommended Permissions |
 |---------|---------|
-| 開發者 | 查看議題、新增議題、編輯議題、新增備註、管理議題觀察者 |
-| 測試者 | 查看議題、新增議題、編輯議題、新增備註 |
-| 專案經理 | 所有議題相關權限、查看專案、管理成員 |
+| Developer | View issues, Add issues, Edit issues, Add notes, Manage issue watchers |
+| Tester | View issues, Add issues, Edit issues, Add notes |
+| Project Manager | All issue-related permissions, View projects, Manage members |
 
-**關鍵權限設定**
-- ✅ **查看議題** - 必要，用於 `get_issue`、`list_project_issues` 等
-- ✅ **新增議題** - 必要，用於 `create_new_issue`
-- ✅ **編輯議題** - 必要，用於 `update_issue_status`、`assign_issue` 等
-- ✅ **新增備註** - 必要，用於 `add_issue_note`
-- ✅ **管理議題觀察者** - 選擇性，用於觀察者功能
+**Key Permission Settings**
+- ✅ **View issues** - Required for `get_issue`, `list_project_issues`, etc.
+- ✅ **Add issues** - Required for `create_new_issue`
+- ✅ **Edit issues** - Required for `update_issue_status`, `assign_issue`, etc.
+- ✅ **Add notes** - Required for `add_issue_note`
+- ✅ **Manage issue watchers** - Optional, for watcher features
 
-### 3. 設定追蹤器
-> **建議的基本追蹤器類型**
+### 3. Configure Trackers
+> **Recommended basic tracker types**
 
-1. 前往 **管理** → **追蹤器**
-2. 建立以下追蹤器：
+1. Go to **Administration** → **Trackers**
+2. Create the following trackers:
 
-| 追蹤器名稱 | 用途 | 預設狀態 |
+| Tracker Name | Purpose | Default Status |
 |-----------|------|---------|
-| 缺陷 (Bug) | 軟體錯誤追蹤 | 新建 |
-| 功能 (Feature) | 新功能需求 | 新建 |
-| 支援 (Support) | 技術支援請求 | 新建 |
+| Bug | Software bug tracking | New |
+| Feature | New feature requests | New |
+| Support | Technical support requests | New |
 
-**設定追蹤器屬性**
-- 設定每個追蹤器的**預設狀態**
-- 選擇適用的**自訂欄位**（如果有的話）
+**Set Tracker Properties**
+- Set the **default status** for each tracker
+- Select applicable **custom fields** (if any)
 
-### 4. 設定議題狀態
-> **建議的基本狀態設定**
+### 4. Configure Issue Statuses
+> **Recommended basic status settings**
 
-1. 前往 **管理** → **議題狀態**
-2. 建立以下狀態：
+1. Go to **Administration** → **Issue statuses**
+2. Create the following statuses:
 
-| 狀態名稱 | 是否已關閉 | 用途 |
+| Status Name | Is Closed | Purpose |
 |---------|-----------|------|
-| 新建 | ❌ | 剛建立的議題 |
-| 進行中 | ❌ | 正在處理的議題 |
-| 等待回饋 | ❌ | 等待用戶回應 |
-| 已解決 | ❌ | 已修復但待驗證 |
-| 已關閉 | ✅ | 已完成的議題 |
-| 已拒絕 | ✅ | 不會處理的議題 |
+| New | ❌ | Just created issue |
+| In Progress | ❌ | Issue being processed |
+| Waiting for Feedback | ❌ | Waiting for user response |
+| Resolved | ❌ | Fixed but pending verification |
+| Closed | ✅ | Completed issue |
+| Rejected | ✅ | Issue that will not be handled |
 
-**重要設定**
-- 至少要有一個「已關閉」狀態（用於 `close_issue` 工具）
-- 設定適當的**狀態顏色**以便視覺區分
+**Important Settings**
+- At least one "Closed" status is required (for the `close_issue` tool)
+- Set appropriate **status colors** for visual distinction
 
-### 6. 設定議題優先級
-> **定義議題重要性等級**
+### 6. Configure Issue Priorities
+> **Define issue importance levels**
 
-1. 前往 **管理** → **列舉值** → **議題優先級**
-2. 建立或編輯優先級：
+1. Go to **Administration** → **Enumerations** → **Issue priorities**
+2. Create or edit priorities:
 
-| 優先級名稱 | 建議用途 | 設為預設 |
+| Priority Name | Recommended Purpose | Set as Default |
 |-----------|---------|---------|
-| 低 | 非緊急的改善 | ❌ |
-| 正常 | 一般議題 | ✅ |
-| 高-這邊拜處理 | 重要功能或錯誤，優先處理 | ❌ |
-| 速-這兩天處理 | 緊急議題，需在2天內處理 | ❌ |
-| 急-馬上處理 | 嚴重錯誤，需立即處理 | ❌ |
+| Low | Non-urgent improvements | ❌ |
+| Normal | General issues | ✅ |
+| High - Please handle this side | Important features or bugs, handle with priority | ❌ |
+| Urgent - Handle within two days | Urgent issues, need to be handled within 2 days | ❌ |
+| Critical - Handle immediately | Serious bugs, need immediate handling | ❌ |
 
-### 7. 設定時間追蹤活動
-> **定義工作類型（如果啟用時間追蹤模組）**
+### 7. Configure Time Tracking Activities
+> **Define work types (if time tracking module is enabled)**
 
-1. 前往 **管理** → **列舉值** → **時間追蹤的活動**
-2. 建立活動類型：
+1. Go to **Administration** → **Enumerations** → **Activities (time tracking)**
+2. Create activity types:
 
-| 活動名稱 | 用途 | 設為預設 |
+| Activity Name | Purpose | Set as Default |
 |---------|------|---------|
-| 設計 | 系統設計和規劃 | ✅ |
-| 開發 | 程式開發和編碼 | ❌ |
-| 除錯 | 程式錯誤修復 | ❌ |
-| 調查 | 問題分析和研究 | ❌ |
-| 討論 | 會議和技術討論 | ❌ |
-| 測試 | 測試和品質保證 | ❌ |
-| 維護 | 系統維護和支援 | ❌ |
-| 文件 | 文件撰寫和維護 | ❌ |
-| 教學 | 培訓和知識分享 | ❌ |
-| 翻譯 | 多語言本地化工作 | ❌ |
-| 其他 | 其他類型的工作 | ❌ |
+| Design | System design and planning | ✅ |
+| Development | Programming and coding | ❌ |
+| Debug | Program bug fixes | ❌ |
+| Investigation | Problem analysis and research | ❌ |
+| Discussion | Meetings and technical discussions | ❌ |
+| Testing | Testing and quality assurance | ❌ |
+| Maintenance | System maintenance and support | ❌ |
+| Documentation | Documentation writing and maintenance | ❌ |
+| Teaching | Training and knowledge sharing | ❌ |
+| Translation | Multilingual localization work | ❌ |
+| Other | Other types of work | ❌ |
 
-### 8. 設定文件分類
-> **定義文件組織類別（如果啟用文件模組）**
+### 8. Configure Document Categories
+> **Define document organization categories (if document module is enabled)**
 
-1. 前往 **管理** → **列舉值** → **文件分類**
-2. 建立文件分類：
+1. Go to **Administration** → **Enumerations** → **Document categories**
+2. Create document categories:
 
-| 分類名稱 | 用途 | 設為預設 |
+| Category Name | Purpose | Set as Default |
 |---------|------|---------|
-| 使用手冊 | 使用者操作手冊和說明 | ✅ |
-| 技術文件 | 技術規格和設計文件 | ❌ |
-| 申請表單 | 各種申請和表單文件 | ❌ |
-| 需求文件 | 系統需求和功能說明 | ❌ |
+| User Manual | User operation manual and instructions | ✅ |
+| Technical Documentation | Technical specifications and design documents | ❌ |
+| Application Forms | Various applications and form documents | ❌ |
+| Requirements Documents | System requirements and feature descriptions | ❌ |
 
-### 9. 設定工作流程
-> **定義狀態轉換規則**
+### 9. Configure Workflow
+> **Define status transition rules**
 
-1. 前往 **管理** → **工作流程**
-2. 選擇**角色**和**追蹤器**組合
-3. 設定允許的狀態轉換
+1. Go to **Administration** → **Workflow**
+2. Select a **role** and **tracker** combination
+3. Set allowed status transitions
 
-**建議的基本工作流程**
+**Recommended Basic Workflow**
 ```
-新建 → 進行中 → 已解決 → 已關閉
+New → In Progress → Resolved → Closed
   ↓      ↓        ↓
-等待回饋 ← ← ← ← ← ← ← ← ← (任何狀態)
+Waiting for Feedback ← ← ← ← ← ← ← ← ← (any status)
   ↓
-已拒絕
+Rejected
 ```
 
-**重要提醒**
-- 確保每個角色都能進行基本的狀態轉換
-- 測試關鍵路徑：新建 → 進行中 → 已關閉
-- 確認 `close_issue` 工具需要的轉換路徑可用
+**Important Reminders**
+- Ensure each role can perform basic status transitions
+- Test critical path: New → In Progress → Closed
+- Confirm the transition path required by the `close_issue` tool is available
 
-### 10. 建立專案
-> **設定第一個測試專案**
+### 10. Create Projects
+> **Set up the first test project**
 
-1. 前往 **專案** → **新增專案**
-2. 填寫專案資訊：
-   - **名稱**：測試專案
-   - **識別碼**：test-project（用於 API 呼叫）
-   - **描述**：用於測試 MCP 工具的專案
-   - **首頁**：（選填）
+1. Go to **Projects** → **New project**
+2. Fill in project information:
+   - **Name**: Test Project
+   - **Identifier**: test-project (used for API calls)
+   - **Description**: Project for testing MCP tools
+   - **Homepage**: (optional)
 
-3. **選擇模組**：
-   - ✅ 議題跟蹤
-   - ✅ 時間追蹤（選擇性）
-   - ✅ 文件（選擇性）
-   - ✅ 檔案（選擇性）
+3. **Select Modules**:
+   - ✅ Issue tracking
+   - ✅ Time tracking (optional)
+   - ✅ Documents (optional)
+   - ✅ Files (optional)
 
-4. **設定追蹤器**：
-   - 選擇專案要使用的追蹤器類型
-   - 建議至少選擇「缺陷」和「功能」
+4. **Set Trackers**:
+   - Select tracker types to use in the project
+   - Recommend at least selecting "Bug" and "Feature"
 
-5. **指派成員**：
-   - 新增用戶到專案
-   - 分配適當的角色
+5. **Assign Members**:
+   - Add users to the project
+   - Assign appropriate roles
 
-### 11. 驗證設定
-> **測試基本功能是否正常**
+### 11. Verify Setup
+> **Test whether basic functions are working properly**
 
-**使用 MCP 工具測試**
-1. 取得 API 金鑰並設定環境變數
-2. 執行以下測試：
+**Test Using MCP Tools**
+1. Get the API key and set environment variables
+2. Run the following tests:
 
 ```bash
-# 測試連線
+# Test connection
 uv run python -c "
 from redmine_mcp.server import health_check
 print(health_check())
 "
 
-# 測試專案列表
+# Test project list
 uv run python -c "
 from redmine_mcp.server import get_projects
 print(get_projects())
 "
 
-# 測試狀態列表
+# Test status list
 uv run python -c "
 from redmine_mcp.server import get_issue_statuses
 print(get_issue_statuses())
 "
 
-# 測試追蹤器列表
+# Test tracker list
 uv run python -c "
 from redmine_mcp.server import get_trackers
 print(get_trackers())
 "
 
-# 測試優先級列表
+# Test priority list
 uv run python -c "
 from redmine_mcp.server import get_priorities
 print(get_priorities())
 "
 
-# 測試時間追蹤活動列表
+# Test time tracking activity list
 uv run python -c "
 from redmine_mcp.server import get_time_entry_activities
 print(get_time_entry_activities())
 "
 
-# 測試文件分類列表
+# Test document category list
 uv run python -c "
 from redmine_mcp.server import get_document_categories
 print(get_document_categories())
 "
 ```
 
-**手動測試建立議題**
-1. 在專案中手動建立一個測試議題
-2. 嘗試變更議題狀態
-3. 新增備註測試
+**Manually Test Creating Issues**
+1. Manually create a test issue in the project
+2. Try changing the issue status
+3. Test adding notes
 
-## 🚨 常見問題
+## 🚨 Common Problems
 
-### 問題：無法建立議題
-**可能原因**
-- 工作流程未正確設定
-- 用戶權限不足
-- 追蹤器設定問題
+### Problem: Cannot Create Issues
+**Possible Causes**
+- Workflow not properly configured
+- Insufficient user permissions
+- Tracker configuration issues
 
-**解決方法**
-1. 檢查工作流程中是否允許從「無狀態」到「新建」
-2. 確認用戶在專案中有「新增議題」權限
-3. 確認追蹤器已啟用且有預設狀態
+**Solutions**
+1. Check if the workflow allows from "no status" to "New"
+2. Confirm the user has "Add issues" permission in the project
+3. Confirm the tracker is enabled and has a default status
 
-### 問題：無法更新議題狀態
-**可能原因**
-- 工作流程不允許該狀態轉換
-- 用戶角色權限不足
+### Problem: Cannot Update Issue Status
+**Possible Causes**
+- Workflow does not allow that status transition
+- User role permissions are insufficient
 
-**解決方法**
-1. 檢查工作流程設定
-2. 確認用戶有「編輯議題」權限
-3. 測試手動狀態轉換
+**Solutions**
+1. Check workflow settings
+2. Confirm the user has "Edit issues" permission
+3. Test manual status transition
 
-### 問題：找不到專案或議題
-**可能原因**
-- 用戶沒有查看權限
-- 專案狀態為封存
+### Problem: Cannot Find Projects or Issues
+**Possible Causes**
+- User does not have view permission
+- Project status is archived
 
-**解決方法**
-1. 確認用戶是專案成員
-2. 檢查專案狀態是否為「啟用」
-3. 確認用戶有「查看議題」權限
+**Solutions**
+1. Confirm the user is a project member
+2. Check if the project status is "Active"
+3. Confirm the user has "View issues" permission
 
-## 📝 設定檢查清單
+## 📝 Setup Checklist
 
-在開始使用 redmine-mcp 之前，請確認：
+Before starting to use redmine-mcp, please confirm:
 
-- [ ] ✅ REST API 已啟用
-- [ ] ✅ 至少建立一個角色（具備基本議題權限）
-- [ ] ✅ 至少建立一個追蹤器
-- [ ] ✅ 建立基本的議題狀態（包含至少一個「已關閉」狀態）
-- [ ] ✅ 設定議題優先級（建議至少有：低、正常、高、緊急）
-- [ ] ✅ 設定時間追蹤活動（如果使用時間追蹤功能）
-- [ ] ✅ 設定文件分類（如果使用文件模組）
-- [ ] ✅ 設定基本的工作流程（允許狀態轉換）
-- [ ] ✅ 建立至少一個專案
-- [ ] ✅ 將用戶加入專案並分配角色
-- [ ] ✅ 取得 API 金鑰
-- [ ] ✅ 測試基本 MCP 功能
+- [ ] ✅ REST API is enabled
+- [ ] ✅ At least one role created (with basic issue permissions)
+- [ ] ✅ At least one tracker created
+- [ ] ✅ Basic issue statuses created (including at least one "Closed" status)
+- [ ] ✅ Issue priorities configured (recommend at least: Low, Normal, High, Urgent)
+- [ ] ✅ Time tracking activities configured (if using time tracking features)
+- [ ] ✅ Document categories configured (if using document module)
+- [ ] ✅ Basic workflow configured (allowing status transitions)
+- [ ] ✅ At least one project created
+- [ ] ✅ Users added to projects and assigned roles
+- [ ] ✅ API key obtained
+- [ ] ✅ Basic MCP functions tested
 
-## 🔗 相關資源
+## 🔗 Related Resources
 
-- [Redmine 管理指南](https://www.redmine.org/projects/redmine/wiki/RedmineAdministration)
-- [Redmine REST API 文件](https://www.redmine.org/projects/redmine/wiki/Rest_api)
-- [工作流程設定](https://www.redmine.org/projects/redmine/wiki/RedmineWorkflow)
-- [角色與權限](https://www.redmine.org/projects/redmine/wiki/RedmineRoles)
+- [Redmine Administration Guide](https://www.redmine.org/projects/redmine/wiki/RedmineAdministration)
+- [Redmine REST API Documentation](https://www.redmine.org/projects/redmine/wiki/Rest_api)
+- [Workflow Setup](https://www.redmine.org/projects/redmine/wiki/RedmineWorkflow)
+- [Roles and Permissions](https://www.redmine.org/projects/redmine/wiki/RedmineRoles)
 
 ---
 
-完成這些設定後，您就可以開始使用 redmine-mcp 的所有功能了！
+After completing these settings, you can start using all features of redmine-mcp!

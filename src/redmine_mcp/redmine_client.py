@@ -1,6 +1,6 @@
 """
-Redmine API 客戶端
-負責與 Redmine 系統的 HTTP 通訊
+Redmine API client
+Responsible for HTTP communication with the Redmine system
 """
 
 import requests
@@ -17,7 +17,7 @@ from .validators import RedmineValidator, validate_and_clean_data, RedmineValida
 
 @dataclass
 class RedmineIssue:
-    """Redmine 議題數據結構"""
+    """Redmine issue data structure"""
     id: int
     subject: str
     description: str
@@ -34,7 +34,7 @@ class RedmineIssue:
 
 @dataclass
 class RedmineProject:
-    """Redmine 專案數據結構"""
+    """Redmine project data structure"""
     id: int
     name: str
     identifier: str
@@ -46,7 +46,7 @@ class RedmineProject:
 
 @dataclass
 class RedmineUser:
-    """Redmine 用戶數據結構"""
+    """Redmine user data structure"""
     id: int
     login: str
     firstname: str
@@ -58,7 +58,7 @@ class RedmineUser:
 
 
 class RedmineAPIError(Exception):
-    """Redmine API 錯誤"""
+    """Redmine API error"""
     def __init__(self, message: str, status_code: Optional[int] = None, response_data: Optional[Dict] = None):
         super().__init__(message)
         self.status_code = status_code
@@ -66,7 +66,7 @@ class RedmineAPIError(Exception):
 
 
 class RedmineClient:
-    """Redmine API 客戶端"""
+    """Redmine API client"""
     
     def __init__(self):
         self.config = get_config()
@@ -74,11 +74,11 @@ class RedmineClient:
         self.session.headers.update(self.config.api_headers)
         self.session.timeout = self.config.redmine_timeout
         
-        # 快取相關設定
+        # Cache-related settings
         self.cache_dir = Path.home() / ".redmine_mcp"
         self.cache_dir.mkdir(exist_ok=True)
         
-        # 根據 domain 建立唯一的快取檔案名稱
+        # Create a unique cache file name based on domain
         domain_hash = hash(self.config.redmine_domain)
         safe_domain = self.config.redmine_domain.replace('://', '_').replace('/', '_').replace(':', '_')
         self._cache_file = self.cache_dir / f"cache_{safe_domain}_{abs(domain_hash)}.json"
@@ -87,7 +87,7 @@ class RedmineClient:
         self._issue_snapshots: Dict[int, Dict[str, Any]] = {}  # {issue_id: snapshot}
     
     def _make_request(self, method: str, endpoint: str, **kwargs) -> Dict[str, Any]:
-        """執行 HTTP 請求"""
+        """Execute HTTP request"""
         url = f"{self.config.redmine_domain}/{endpoint.lstrip('/')}"
         
         try:
@@ -115,7 +115,7 @@ class RedmineClient:
             except:
                 pass
             
-            # 使用友好的錯誤訊息
+            # Use friendly error messages
             context = "issue" if "/issues" in url else "project" if "/projects" in url else "request"
             friendly_msg = RedmineValidator.get_friendly_error_message(e, context)
             raise RedmineAPIError(friendly_msg, status_code, error_data)
@@ -127,7 +127,7 @@ class RedmineClient:
             raise RedmineAPIError(friendly_msg)
     
     def get_issue(self, issue_id: int, include: Optional[List[str]] = None) -> RedmineIssue:
-        """取得單一議題"""
+        """Get a single issue"""
         params = {}
         if include:
             params['include'] = ','.join(include)
@@ -135,7 +135,7 @@ class RedmineClient:
         response = self._make_request('GET', f'/issues/{issue_id}.json', params=params)
         
         if 'issue' not in response:
-            raise RedmineAPIError(f"議題 {issue_id} 不存在")
+            raise RedmineAPIError(f"Issue {issue_id} does not exist")
         
         issue_data = response['issue']
         return RedmineIssue(
@@ -154,7 +154,7 @@ class RedmineClient:
         )
     
     def get_issue_raw(self, issue_id: int, include: Optional[List[str]] = None) -> Dict[str, Any]:
-        """取得單一議題的原始 API 資料（包含 journals 和 attachments）"""
+        """Get raw API data for a single issue (including journals and attachments)"""
         params = {}
         if include:
             params['include'] = ','.join(include)
@@ -162,14 +162,14 @@ class RedmineClient:
         response = self._make_request('GET', f'/issues/{issue_id}.json', params=params)
 
         if 'issue' not in response:
-            raise RedmineAPIError(f"議題 {issue_id} 不存在")
+            raise RedmineAPIError(f"Issue {issue_id} does not exist")
 
         issue_data = response['issue']
         self._save_issue_snapshot(issue_id, issue_data)
         return issue_data
 
     def _save_issue_snapshot(self, issue_id: int, issue_data: Dict[str, Any]):
-        """保存議題快照（用於變更偵測）"""
+        """Save issue snapshot (for change detection)"""
         journals = issue_data.get('journals', [])
         attachments = issue_data.get('attachments', [])
         self._issue_snapshots[issue_id] = {
@@ -192,11 +192,11 @@ class RedmineClient:
         }
 
     def get_issue_snapshot(self, issue_id: int) -> Optional[Dict[str, Any]]:
-        """取得議題的快照"""
+        """Get issue snapshot"""
         return self._issue_snapshots.get(issue_id)
 
     def clear_issue_snapshot(self, issue_id: int):
-        """清除議題快照"""
+        """Clear issue snapshot"""
         self._issue_snapshots.pop(issue_id, None)
     
     def list_issues(self, project_id: Optional[int] = None, status_id: Optional[int] = None, 
@@ -205,8 +205,8 @@ class RedmineClient:
                    created_on: Optional[str] = None, updated_on: Optional[str] = None,
                    limit: int = 100, offset: int = 0, sort: Optional[str] = None,
                    include: Optional[List[str]] = None) -> List[RedmineIssue]:
-        """列出議題"""
-        # 驗證查詢參數
+        """List issues"""
+        # Validate query parameters
         query_params = {
             'project_id': project_id, 'status_id': status_id, 'assigned_to_id': assigned_to_id,
             'tracker_id': tracker_id, 'priority_id': priority_id, 'author_id': author_id,
@@ -217,11 +217,11 @@ class RedmineClient:
         try:
             validated_params = validate_and_clean_data(query_params, "query")
         except RedmineValidationError as e:
-            raise RedmineAPIError(f"查詢參數驗證失敗：{e}")
+            raise RedmineAPIError(f"Query parameter validation failed: {e}")
         
         params = validated_params
         
-        # 加入額外參數
+        # Add additional parameters
         if include:
             params['include'] = ','.join(include)
         
@@ -253,8 +253,8 @@ class RedmineClient:
                     start_date: Optional[str] = None, due_date: Optional[str] = None,
                     estimated_hours: Optional[float] = None,
                     category_id: Optional[int] = None) -> int:
-        """建立新議題，回傳議題 ID"""
-        # 準備驗證資料
+        """Create a new issue, return issue ID"""
+        # Prepare validation data
         validation_data = {
             'project_id': project_id,
             'subject': subject,
@@ -271,26 +271,26 @@ class RedmineClient:
             'category_id': category_id,
         }
         
-        # 驗證資料
+        # Validate data
         try:
             validated_data = validate_and_clean_data(validation_data, "issue")
         except RedmineValidationError as e:
-            raise RedmineAPIError(f"議題資料驗證失敗：{e}")
+            raise RedmineAPIError(f"Issue data validation failed: {e}")
         
         issue_data = {'issue': validated_data}
         
         response = self._make_request('POST', '/issues.json', json=issue_data)
         
         if 'issue' not in response:
-            raise RedmineAPIError("建立議題失敗：回應中沒有議題資料")
+            raise RedmineAPIError("Failed to create issue: no issue data in response")
         
         return response['issue']['id']
     
     def update_issue(self, issue_id: int, **kwargs) -> bool:
-        """更新議題"""
+        """Update issue"""
         update_data = {'issue': {}}
         
-        # 支援的更新欄位
+        # Supported update fields
         if 'subject' in kwargs:
             update_data['issue']['subject'] = kwargs['subject']
         if 'description' in kwargs:
@@ -306,7 +306,7 @@ class RedmineClient:
         if 'tracker_id' in kwargs:
             update_data['issue']['tracker_id'] = kwargs['tracker_id']
         if 'parent_issue_id' in kwargs:
-            # 如果 parent_issue_id 為 None，則移除父議題關係
+            # If parent_issue_id is None, remove the parent issue relationship
             if kwargs['parent_issue_id'] is None:
                 update_data['issue']['parent_issue_id'] = ""
             else:
@@ -325,29 +325,29 @@ class RedmineClient:
             update_data['issue']['custom_fields'] = kwargs['custom_fields']
         
         if not update_data['issue']:
-            raise RedmineAPIError("沒有提供要更新的欄位")
+            raise RedmineAPIError("No fields provided for update")
         
         self._make_request('PUT', f'/issues/{issue_id}.json', json=update_data)
         return True
     
     def delete_issue(self, issue_id: int) -> bool:
-        """刪除議題"""
+        """Delete issue"""
         self._make_request('DELETE', f'/issues/{issue_id}.json')
         return True
     
     def add_watcher(self, issue_id: int, user_id: int) -> bool:
-        """新增議題觀察者"""
+        """Add issue watcher"""
         watcher_data = {'user_id': user_id}
         self._make_request('POST', f'/issues/{issue_id}/watchers.json', json=watcher_data)
         return True
     
     def remove_watcher(self, issue_id: int, user_id: int) -> bool:
-        """移除議題觀察者"""
+        """Remove issue watcher"""
         self._make_request('DELETE', f'/issues/{issue_id}/watchers/{user_id}.json')
         return True
     
     def get_project(self, project_id: Union[int, str], include: Optional[List[str]] = None) -> RedmineProject:
-        """取得專案資訊"""
+        """Get project information"""
         params = {}
         if include:
             params['include'] = ','.join(include)
@@ -355,7 +355,7 @@ class RedmineClient:
         response = self._make_request('GET', f'/projects/{project_id}.json', params=params)
         
         if 'project' not in response:
-            raise RedmineAPIError(f"專案 {project_id} 不存在")
+            raise RedmineAPIError(f"Project {project_id} does not exist")
         
         project_data = response['project']
         return RedmineProject(
@@ -369,7 +369,7 @@ class RedmineClient:
         )
     
     def list_projects(self, limit: int = 100, offset: int = 0) -> List[RedmineProject]:
-        """列出專案"""
+        """List projects"""
         params = {
             'limit': limit,
             'offset': offset
@@ -395,8 +395,8 @@ class RedmineClient:
                       homepage: str = "", is_public: bool = True, parent_id: Optional[int] = None,
                       inherit_members: bool = False, tracker_ids: Optional[List[int]] = None,
                       enabled_module_names: Optional[List[str]] = None) -> int:
-        """建立新專案，回傳專案 ID"""
-        # 準備驗證資料
+        """Create a new project, return project ID"""
+        # Prepare validation data
         validation_data = {
             'name': name,
             'identifier': identifier,
@@ -409,84 +409,84 @@ class RedmineClient:
             'enabled_module_names': enabled_module_names
         }
         
-        # 驗證資料
+        # Validate data
         try:
             validated_data = validate_and_clean_data(validation_data, "project")
         except RedmineValidationError as e:
-            raise RedmineAPIError(f"專案資料驗證失敗：{e}")
+            raise RedmineAPIError(f"Project data validation failed: {e}")
         
         project_data = {'project': validated_data}
         
         response = self._make_request('POST', '/projects.json', json=project_data)
         
         if 'project' not in response:
-            raise RedmineAPIError("建立專案失敗：回應中沒有專案資料")
+            raise RedmineAPIError("Failed to create project: no project data in response")
         
         return response['project']['id']
     
     def update_project(self, project_id: Union[int, str], **kwargs) -> bool:
-        """更新專案"""
+        """Update project"""
         update_data = {'project': {}}
         
-        # 支援的更新欄位
+        # Supported update fields
         for field in ['name', 'description', 'homepage', 'is_public', 'parent_id', 
                      'inherit_members', 'tracker_ids', 'enabled_module_names']:
             if field in kwargs:
                 update_data['project'][field] = kwargs[field]
         
         if not update_data['project']:
-            raise RedmineAPIError("沒有提供要更新的欄位")
+            raise RedmineAPIError("No fields provided for update")
         
         self._make_request('PUT', f'/projects/{project_id}.json', json=update_data)
         return True
     
     def delete_project(self, project_id: Union[int, str]) -> bool:
-        """刪除專案"""
+        """Delete project"""
         self._make_request('DELETE', f'/projects/{project_id}.json')
         return True
     
     def archive_project(self, project_id: Union[int, str]) -> bool:
-        """封存專案"""
+        """Archive project"""
         self._make_request('PUT', f'/projects/{project_id}/archive.json')
         return True
     
     def unarchive_project(self, project_id: Union[int, str]) -> bool:
-        """解除封存專案"""
+        """Unarchive project"""
         self._make_request('PUT', f'/projects/{project_id}/unarchive.json')
         return True
     
     def get_issue_statuses(self) -> List[Dict[str, Any]]:
-        """取得議題狀態列表"""
+        """Get issue status list"""
         response = self._make_request('GET', '/issue_statuses.json')
         return response.get('issue_statuses', [])
     
     def get_priorities(self) -> List[Dict[str, Any]]:
-        """取得優先級列表"""
+        """Get priority list"""
         response = self._make_request('GET', '/enumerations/issue_priorities.json')
         return response.get('issue_priorities', [])
     
     def get_trackers(self) -> List[Dict[str, Any]]:
-        """取得追蹤器列表"""
+        """Get tracker list"""
         response = self._make_request('GET', '/trackers.json')
         return response.get('trackers', [])
     
     def get_time_entry_activities(self) -> List[Dict[str, Any]]:
-        """取得時間追蹤活動列表"""
+        """Get time entry activity list"""
         response = self._make_request('GET', '/enumerations/time_entry_activities.json')
         return response.get('time_entry_activities', [])
     
     def get_document_categories(self) -> List[Dict[str, Any]]:
-        """取得文件分類列表"""
+        """Get document category list"""
         response = self._make_request('GET', '/enumerations/document_categories.json')
         return response.get('document_categories', [])
 
     def get_issue_categories(self, project_id: int) -> List[Dict[str, Any]]:
-        """取得專案的議題分類列表"""
+        """Get project issue category list"""
         response = self._make_request('GET', f'/projects/{project_id}/issue_categories.json')
         return response.get('issue_categories', [])
 
     def _load_category_cache(self, project_id: int) -> Dict[str, int]:
-        """載入指定專案的議題分類快取（按需載入）"""
+        """Load issue category cache for the specified project (on-demand loading)"""
         if project_id in self._category_cache:
             return self._category_cache[project_id]
 
@@ -501,22 +501,22 @@ class RedmineClient:
         return self._category_cache[project_id]
 
     def find_category_id_by_name(self, project_id: int, name: str) -> Optional[int]:
-        """根據議題分類名稱找到對應的 ID（專案層級）"""
+        """Find the corresponding ID by issue category name (project level)"""
         cache = self._load_category_cache(project_id)
         return cache.get(name)
 
     def get_available_categories(self, project_id: int) -> Dict[str, int]:
-        """取得指定專案所有可用的議題分類選項（名稱到ID的對應）"""
+        """Get all available issue category options for the specified project (name to ID mapping)"""
         return self._load_category_cache(project_id)
 
     def refresh_category_cache(self, project_id: int):
-        """刷新指定專案的議題分類快取"""
+        """Refresh issue category cache for the specified project"""
         self._category_cache.pop(project_id, None)
         self._load_category_cache(project_id)
 
     def get_users(self, status: Optional[int] = None, name: Optional[str] = None,
                  group_id: Optional[int] = None, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
-        """取得用戶列表"""
+        """Get user list"""
         params = {
             'limit': limit,
             'offset': offset
@@ -533,7 +533,7 @@ class RedmineClient:
         return response.get('users', [])
     
     def get_user(self, user_id: Union[int, str], include: Optional[List[str]] = None) -> Dict[str, Any]:
-        """取得單一用戶資訊"""
+        """Get single user information"""
         params = {}
         if include:
             params['include'] = ','.join(include)
@@ -541,21 +541,21 @@ class RedmineClient:
         response = self._make_request('GET', f'/users/{user_id}.json', params=params)
         
         if 'user' not in response:
-            raise RedmineAPIError(f"用戶 {user_id} 不存在")
+            raise RedmineAPIError(f"User {user_id} does not exist")
         
         return response['user']
     
     def get_current_user(self) -> Dict[str, Any]:
-        """取得當前用戶資訊"""
+        """Get current user information"""
         response = self._make_request('GET', '/my/account.json')
         
         if 'user' not in response:
-            raise RedmineAPIError("無法取得當前用戶資訊")
+            raise RedmineAPIError("Unable to get current user information")
         
         return response['user']
     
     def list_users(self, limit: int = 20, offset: int = 0, status: int = None) -> List[RedmineUser]:
-        """列出用戶"""
+        """List users"""
         params = {
             'limit': min(max(limit, 1), 100),
             'offset': max(offset, 0)
@@ -582,7 +582,7 @@ class RedmineClient:
         return users
     
     def search_users(self, query: str, limit: int = 10) -> List[RedmineUser]:
-        """搜尋用戶（依姓名或登入名）"""
+        """Search users (by name or login)"""
         if not query.strip():
             return []
             
@@ -609,16 +609,16 @@ class RedmineClient:
         return users
     
     def get_user(self, user_id: int) -> Dict[str, Any]:
-        """取得特定用戶詳情"""
+        """Get specific user details"""
         response = self._make_request('GET', f'/users/{user_id}.json')
         
         if 'user' not in response:
-            raise RedmineAPIError(f"找不到用戶 ID {user_id}")
+            raise RedmineAPIError(f"User ID {user_id} not found")
         
         return response['user']
     
     def _load_enum_cache(self) -> Dict[str, Any]:
-        """載入列舉值快取"""
+        """Load enumeration cache"""
         if self._enum_cache is not None:
             return self._enum_cache
             
@@ -627,40 +627,40 @@ class RedmineClient:
                 with open(self._cache_file, 'r', encoding='utf-8') as f:
                     self._enum_cache = json.load(f)
                     
-                # 檢查 domain 是否匹配
+                # Check if domain matches
                 cached_domain = self._enum_cache.get('domain')
                 if cached_domain != self.config.redmine_domain:
-                    # Domain 不匹配，重新建立快取
+                    # Domain mismatch, rebuild cache
                     self._refresh_enum_cache()
                     return self._enum_cache or {}
                     
-                # 檢查快取是否需要更新（超過24小時）
+                # Check if cache needs to be updated (older than 24 hours)
                 cache_time = self._enum_cache.get('cache_time', 0)
                 current_time = datetime.now().timestamp()
-                if current_time - cache_time > 86400:  # 24小時
+                if current_time - cache_time > 86400:  # 24 hours
                     self._refresh_enum_cache()
             else:
                 self._refresh_enum_cache()
                 
         except Exception:
-            # 快取讀取失敗，重新建立
+            # Cache read failed, rebuild
             self._refresh_enum_cache()
             
         return self._enum_cache or {}
     
     def _refresh_enum_cache(self):
-        """刷新列舉值快取"""
+        """Refresh enumeration cache"""
         try:
-            # 取得所有列舉值
+            # Get all enumeration values
             priorities = self.get_priorities()
             statuses = self.get_issue_statuses()
             trackers = self.get_trackers()
             time_entry_activities = self.get_time_entry_activities()
             
-            # 取得用戶列表（限制100個避免太大）
+            # Get user list (limit to 100 to avoid being too large)
             users = self.list_users(limit=100)
             
-            # 建立名稱到ID的對應
+            # Build name-to-ID mapping
             user_by_name = {}
             user_by_login = {}
             for user in users:
@@ -680,12 +680,12 @@ class RedmineClient:
                 'users_by_login': user_by_login
             }
             
-            # 儲存到檔案
+            # Save to file
             with open(self._cache_file, 'w', encoding='utf-8') as f:
                 json.dump(self._enum_cache, f, ensure_ascii=False, indent=2)
                 
         except Exception as e:
-            # 快取刷新失敗，使用空快取
+            # Cache refresh failed, use empty cache
             self._enum_cache = {
                 'cache_time': 0, 
                 'domain': self.config.redmine_domain,
@@ -698,59 +698,59 @@ class RedmineClient:
             }
     
     def find_priority_id_by_name(self, name: str) -> Optional[int]:
-        """根據優先權名稱找到對應的 ID"""
+        """Find the corresponding ID by priority name"""
         cache = self._load_enum_cache()
         return cache.get('priorities', {}).get(name)
     
     def find_status_id_by_name(self, name: str) -> Optional[int]:
-        """根據狀態名稱找到對應的 ID"""
+        """Find the corresponding ID by status name"""
         cache = self._load_enum_cache()
         return cache.get('statuses', {}).get(name)
     
     def find_tracker_id_by_name(self, name: str) -> Optional[int]:
-        """根據追蹤器名稱找到對應的 ID"""
+        """Find the corresponding ID by tracker name"""
         cache = self._load_enum_cache()
         return cache.get('trackers', {}).get(name)
     
     def get_available_priorities(self) -> Dict[str, int]:
-        """取得所有可用的優先權選項（名稱到ID的對應）"""
+        """Get all available priority options (name to ID mapping)"""
         cache = self._load_enum_cache()
         return cache.get('priorities', {})
     
     def get_available_statuses(self) -> Dict[str, int]:
-        """取得所有可用的狀態選項（名稱到ID的對應）"""
+        """Get all available status options (name to ID mapping)"""
         cache = self._load_enum_cache()
         return cache.get('statuses', {})
     
     def get_available_trackers(self) -> Dict[str, int]:
-        """取得所有可用的追蹤器選項（名稱到ID的對應）"""
+        """Get all available tracker options (name to ID mapping)"""
         cache = self._load_enum_cache()
         return cache.get('trackers', {})
     
     def find_user_id_by_name(self, name: str) -> Optional[int]:
-        """根據用戶姓名找到對應的 ID"""
+        """Find the corresponding ID by user name"""
         cache = self._load_enum_cache()
         return cache.get('users_by_name', {}).get(name)
     
     def find_user_id_by_login(self, login: str) -> Optional[int]:
-        """根據用戶登入名找到對應的 ID"""
+        """Find the corresponding ID by user login"""
         cache = self._load_enum_cache()
         return cache.get('users_by_login', {}).get(login)
     
     def find_user_id(self, identifier: str) -> Optional[int]:
-        """根據用戶姓名或登入名找到對應的 ID（智慧查詢）"""
+        """Find the corresponding ID by user name or login (smart query)"""
         cache = self._load_enum_cache()
         
-        # 先嘗試姓名查詢
+        # Try name query first
         user_id = cache.get('users_by_name', {}).get(identifier)
         if user_id:
             return user_id
             
-        # 再嘗試登入名查詢
+        # Then try login query
         return cache.get('users_by_login', {}).get(identifier)
     
     def get_available_users(self) -> Dict[str, Dict[str, int]]:
-        """取得所有可用的用戶選項"""
+        """Get all available user options"""
         cache = self._load_enum_cache()
         return {
             'by_name': cache.get('users_by_name', {}),
@@ -758,38 +758,38 @@ class RedmineClient:
         }
     
     def find_time_entry_activity_id_by_name(self, name: str) -> Optional[int]:
-        """根據時間追蹤活動名稱找到對應的 ID"""
+        """Find the corresponding ID by time entry activity name"""
         cache = self._load_enum_cache()
         return cache.get('time_entry_activities', {}).get(name)
     
     def get_available_time_entry_activities(self) -> Dict[str, int]:
-        """取得所有可用的時間追蹤活動選項（名稱到ID的對應）"""
+        """Get all available time entry activity options (name to ID mapping)"""
         cache = self._load_enum_cache()
         return cache.get('time_entry_activities', {})
     
     def refresh_cache(self):
-        """手動刷新快取"""
+        """Manually refresh cache"""
         self._refresh_enum_cache()
     
     def create_time_entry(self, issue_id: int, hours: float, activity_id: int, 
                          comments: str = "", spent_on: Optional[str] = None,
                          user_id: Optional[int] = None) -> int:
-        """建立時間記錄，回傳時間記錄 ID
+        """Create time entry, return time entry ID
         
         Args:
-            issue_id: 議題 ID
-            hours: 耗用工時
-            activity_id: 活動 ID
-            comments: 備註（可選）
-            spent_on: 記錄日期 YYYY-MM-DD 格式（可選，預設今日）
-            user_id: 用戶 ID（可選，預設當前用戶）
+            issue_id: Issue ID
+            hours: Spent hours
+            activity_id: Activity ID
+            comments: Comments (optional)
+            spent_on: Record date in YYYY-MM-DD format (optional, defaults to today)
+            user_id: User ID (optional, defaults to current user)
             
         Returns:
-            時間記錄 ID
+            Time entry ID
         """
         from datetime import date
         
-        # 準備時間記錄資料
+        # Prepare time entry data
         time_entry_data = {
             'issue_id': issue_id,
             'hours': hours,
@@ -807,30 +807,30 @@ class RedmineClient:
         if user_id:
             time_entry_data['user_id'] = user_id
         
-        # 發送請求
+        # Send request
         response = self._make_request('POST', '/time_entries.json', 
                                      json={'time_entry': time_entry_data})
         
         if 'time_entry' not in response:
-            raise RedmineAPIError("建立時間記錄失敗：回應中沒有時間記錄資料")
+            raise RedmineAPIError("Failed to create time entry: no time entry data in response")
             
         return response['time_entry']['id']
     
 
     def get_issue_journals(self, issue_id: int) -> List[Dict[str, Any]]:
-        """取得議題的所有備註/日誌記錄
+        """Get all notes/journal records for an issue
         
         Args:
-            issue_id: 議題 ID
+            issue_id: Issue ID
             
         Returns:
-            備註列表，每個備註包含 id, user, notes, created_on, details 等欄位
+            List of notes, each note contains id, user, notes, created_on, details, and other fields
         """
         issue_data = self.get_issue_raw(issue_id, include=['journals'])
         return issue_data.get('journals', [])
 
     def test_connection(self) -> bool:
-        """測試連線"""
+        """Test connection"""
         try:
             response = self._make_request('GET', '/my/account.json')
             return 'user' in response
@@ -839,53 +839,53 @@ class RedmineClient:
 
     def get_attachment(self, attachment_id: int) -> Dict[str, Any]:
         """
-        取得附件的詳細資訊
+        Get attachment details
         
         Args:
-            attachment_id: 附件 ID
+            attachment_id: Attachment ID
             
         Returns:
-            附件資訊字典，包含 id, filename, filesize, content_type, content_url 等
+            Attachment information dictionary, containing id, filename, filesize, content_type, content_url, etc.
         """
         response = self._make_request('GET', f'/attachments/{attachment_id}.json')
         
         if 'attachment' not in response:
-            raise RedmineAPIError(f"附件 {attachment_id} 不存在")
+            raise RedmineAPIError(f"Attachment {attachment_id} does not exist")
         
         return response['attachment']
     
     def download_attachment(self, attachment_id: int) -> tuple[bytes, Dict[str, Any]]:
         """
-        下載附件內容
+        Download attachment content
         
         Args:
-            attachment_id: 附件 ID
+            attachment_id: Attachment ID
             
         Returns:
-            (檔案二進位內容, 附件資訊字典)
+            (File binary content, attachment information dictionary)
         """
-        # 取得附件資訊
+        # Get attachment information
         attachment = self.get_attachment(attachment_id)
         content_url = attachment.get('content_url')
         
         if not content_url:
-            raise RedmineAPIError(f"附件 {attachment_id} 沒有下載連結")
+            raise RedmineAPIError(f"Attachment {attachment_id} has no download link")
         
-        # 下載檔案（需帶認證）
+        # Download file (requires authentication)
         try:
             response = self.session.get(content_url, timeout=self.config.redmine_timeout)
             response.raise_for_status()
             return response.content, attachment
         except requests.exceptions.RequestException as e:
-            raise RedmineAPIError(f"下載附件失敗: {str(e)}")
+            raise RedmineAPIError(f"Failed to download attachment: {str(e)}")
 
 
-# 全域客戶端實例
+# Global client instance
 _client: Optional[RedmineClient] = None
 
 
 def get_client() -> RedmineClient:
-    """取得全域客戶端實例（單例模式）"""
+    """Get global client instance (singleton pattern)"""
     global _client
     if _client is None:
         _client = RedmineClient()
@@ -893,7 +893,7 @@ def get_client() -> RedmineClient:
 
 
 def reload_client() -> RedmineClient:
-    """重新載入客戶端（主要用於測試）"""
+    """Reload client (mainly used for testing)"""
     global _client
     _client = None
     return get_client()

@@ -1,5 +1,5 @@
 """
-配置管理模組測試
+Configuration management module tests
 """
 
 import os
@@ -9,15 +9,16 @@ from redmine_mcp.config import RedmineConfig, get_config, reload_config
 
 
 class TestRedmineConfig:
-    """RedmineConfig 類別測試"""
+    """RedmineConfig class tests"""
     
     def test_config_with_valid_env(self):
-        """測試有效環境變數的配置"""
+        """Test configuration with valid environment variables"""
+        reload_config()
         with patch.dict(os.environ, {
             'REDMINE_DOMAIN': 'https://test.redmine.com',
             'REDMINE_API_KEY': 'test_api_key_123',
-            'REDMINE_TIMEOUT': '45',
-            'DEBUG_MODE': 'true'
+            'REDMINE_MCP_TIMEOUT': '45',
+            'REDMINE_MCP_LOG_LEVEL': 'DEBUG'
         }):
             config = RedmineConfig()
             
@@ -27,22 +28,26 @@ class TestRedmineConfig:
             assert config.debug_mode is True
     
     def test_config_missing_required_env(self):
-        """測試缺少必要環境變數的情況"""
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ValueError, match="必要的環境變數 REDMINE_DOMAIN 未設定"):
-                RedmineConfig()
+        """Test missing required environment variables"""
+        reload_config()
+        with patch.dict(os.environ, {'REDMINE_DOMAIN': '', 'REDMINE_API_KEY': ''}):
+            with patch('redmine_mcp.config.load_dotenv'):
+                with pytest.raises(ValueError, match="Required environment variable REDMINE_DOMAIN is not set"):
+                    RedmineConfig()
     
     def test_config_invalid_domain(self):
-        """測試無效的 domain 格式"""
+        """Test invalid domain format"""
+        reload_config()
         with patch.dict(os.environ, {
             'REDMINE_DOMAIN': 'invalid-domain',
             'REDMINE_API_KEY': 'test_api_key'
         }):
-            with pytest.raises(ValueError, match="REDMINE_DOMAIN 必須以 http:// 或 https:// 開頭"):
+            with pytest.raises(ValueError, match="REDMINE_DOMAIN must start with http:// or https://"):
                 RedmineConfig()
     
     def test_config_domain_trailing_slash_removal(self):
-        """測試移除 domain 末尾斜線"""
+        """Test removal of trailing slash from domain"""
+        reload_config()
         with patch.dict(os.environ, {
             'REDMINE_DOMAIN': 'https://test.redmine.com/',
             'REDMINE_API_KEY': 'test_api_key'
@@ -51,18 +56,20 @@ class TestRedmineConfig:
             assert config.redmine_domain == 'https://test.redmine.com'
     
     def test_config_default_values(self):
-        """測試預設值"""
+        """Test default values"""
+        reload_config()
         with patch.dict(os.environ, {
             'REDMINE_DOMAIN': 'https://test.redmine.com',
             'REDMINE_API_KEY': 'test_api_key'
         }):
             config = RedmineConfig()
             
-            assert config.redmine_timeout == 30  # 預設值
-            assert config.debug_mode is False   # 預設值
+            assert config.redmine_timeout == 30  # Default value
+            assert config.debug_mode is False   # Default value
     
     def test_api_headers(self):
-        """測試 API 標頭生成"""
+        """Test API header generation"""
+        reload_config()
         with patch.dict(os.environ, {
             'REDMINE_DOMAIN': 'https://test.redmine.com',
             'REDMINE_API_KEY': 'test_api_key_123'
@@ -74,7 +81,8 @@ class TestRedmineConfig:
             assert headers['Content-Type'] == 'application/json'
     
     def test_config_repr(self):
-        """測試字串表示不包含敏感資訊"""
+        """Test string representation does not contain sensitive information"""
+        reload_config()
         with patch.dict(os.environ, {
             'REDMINE_DOMAIN': 'https://test.redmine.com',
             'REDMINE_API_KEY': 'secret_api_key'
@@ -83,14 +91,15 @@ class TestRedmineConfig:
             repr_str = repr(config)
             
             assert 'https://test.redmine.com' in repr_str
-            assert 'secret_api_key' not in repr_str  # 敏感資訊應該被隱藏
+            assert 'secret_api_key' not in repr_str  # Sensitive information should be hidden
 
 
 class TestConfigSingleton:
-    """測試配置單例模式"""
+    """Test configuration singleton pattern"""
     
     def test_get_config_singleton(self):
-        """測試 get_config 回傳同一個實例"""
+        """Test get_config returns the same instance"""
+        reload_config()
         with patch.dict(os.environ, {
             'REDMINE_DOMAIN': 'https://test.redmine.com',
             'REDMINE_API_KEY': 'test_api_key'
@@ -101,14 +110,16 @@ class TestConfigSingleton:
             assert config1 is config2
     
     def test_reload_config(self):
-        """測試 reload_config 建立新實例"""
+        """Test reload_config creates a new instance"""
         with patch.dict(os.environ, {
             'REDMINE_DOMAIN': 'https://test.redmine.com',
             'REDMINE_API_KEY': 'test_api_key'
         }):
+            reload_config()
             config1 = get_config()
-            config2 = reload_config()
+            reload_config()
+            config2 = get_config()
             
-            # 雖然是新實例，但內容應該相同
+            # Although it's a new instance, the content should be the same
             assert config1 is not config2
             assert config1.redmine_domain == config2.redmine_domain

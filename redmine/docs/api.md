@@ -1,96 +1,96 @@
-# Redmine REST API 使用指南
+# Redmine REST API User Guide
 
-本文件說明如何使用 Redmine REST API 進行各種操作，以及與 MCP 工具的整合。
+This document explains how to use the Redmine REST API for various operations, and integration with MCP tools.
 
-## 🔑 API 認證
+## 🔑 API Authentication
 
-### 取得 API 金鑰
+### Get API Key
 
-#### 自動取得（推薦）
+#### Automatic (Recommended)
 ```bash
 cd redmine/scripts
 python configure.py
 ```
 
-#### 手動取得
-1. 登入 Redmine: http://localhost:3000
-2. 使用 `admin` / `admin` 登入
-3. 前往 **我的帳戶** > **API 存取金鑰**
-4. 點擊 **顯示** 按鈕
-5. 複製顯示的金鑰
+#### Manual
+1. Log in to Redmine: http://localhost:3000
+2. Use `admin` / `admin` to log in
+3. Go to **My Account** > **API Access Key**
+4. Click the **Show** button
+5. Copy the displayed key
 
-#### 手動測試
+#### Manual Test
 ```bash
 cd redmine/scripts
 python manual_api_setup.py
 ```
 
-### API 金鑰格式
+### API Key Format
 ```
-範例: a1b2c3d4e5f6789012345678901234567890abcd
-長度: 40 字元的十六進位字串
+Example: a1b2c3d4e5f6789012345678901234567890abcd
+Length: 40-character hexadecimal string
 ```
 
-## 📡 API 端點
+## 📡 API Endpoints
 
-### 基本設定
+### Basic Settings
 
-#### HTTP 標頭
+#### HTTP Headers
 ```http
 X-Redmine-API-Key: your_api_key_here
 Content-Type: application/json
 Accept: application/json
 ```
 
-#### 基礎 URL
+#### Base URL
 ```
 http://localhost:3000
 ```
 
-### 專案 (Projects)
+### Projects
 
-#### 取得所有專案
+#### Get All Projects
 ```bash
 curl -H "X-Redmine-API-Key: YOUR_KEY" \
      http://localhost:3000/projects.json
 ```
 
-#### 取得特定專案
+#### Get Specific Project
 ```bash
 curl -H "X-Redmine-API-Key: YOUR_KEY" \
      http://localhost:3000/projects/mcp-test.json
 ```
 
-#### 建立專案
+#### Create Project
 ```bash
 curl -X POST \
      -H "X-Redmine-API-Key: YOUR_KEY" \
      -H "Content-Type: application/json" \
      -d '{
        "project": {
-         "name": "測試專案",
+         "name": "Test Project",
          "identifier": "test-project",
-         "description": "這是一個測試專案"
+         "description": "This is a test project"
        }
      }' \
      http://localhost:3000/projects.json
 ```
 
-### 議題 (Issues)
+### Issues
 
-#### 取得所有議題
+#### Get All Issues
 ```bash
 curl -H "X-Redmine-API-Key: YOUR_KEY" \
      http://localhost:3000/issues.json
 ```
 
-#### 取得特定議題
+#### Get Specific Issue
 ```bash
 curl -H "X-Redmine-API-Key: YOUR_KEY" \
      http://localhost:3000/issues/1.json
 ```
 
-#### 建立議題
+#### Create Issue
 ```bash
 curl -X POST \
      -H "X-Redmine-API-Key: YOUR_KEY" \
@@ -98,28 +98,28 @@ curl -X POST \
      -d '{
        "issue": {
          "project_id": 1,
-         "subject": "測試議題",
-         "description": "這是一個測試議題的描述"
+         "subject": "Test Issue",
+         "description": "This is a test issue description"
        }
      }' \
      http://localhost:3000/issues.json
 ```
 
-#### 更新議題
+#### Update Issue
 ```bash
 curl -X PUT \
      -H "X-Redmine-API-Key: YOUR_KEY" \
      -H "Content-Type: application/json" \
      -d '{
        "issue": {
-         "subject": "更新的議題標題",
-         "notes": "添加備註"
+         "subject": "Updated issue title",
+         "notes": "Add notes"
        }
      }' \
      http://localhost:3000/issues/1.json
 ```
 
-#### 關閉議題
+#### Close Issue
 ```bash
 curl -X PUT \
      -H "X-Redmine-API-Key: YOUR_KEY" \
@@ -128,166 +128,166 @@ curl -X PUT \
        "issue": {
          "status_id": 5,
          "done_ratio": 100,
-         "notes": "議題已完成"
+         "notes": "Issue completed"
        }
      }' \
      http://localhost:3000/issues/1.json
 ```
 
-### 議題狀態 (Issue Statuses)
+### Issue Statuses
 
-#### 取得所有狀態
+#### Get All Statuses
 ```bash
 curl -H "X-Redmine-API-Key: YOUR_KEY" \
      http://localhost:3000/issue_statuses.json
 ```
 
-預期回應：
+Expected response:
 ```json
 {
   "issue_statuses": [
-    {"id": 1, "name": "新建"},
-    {"id": 2, "name": "進行中"},
-    {"id": 3, "name": "已解決"},
-    {"id": 4, "name": "意見反應"},
-    {"id": 5, "name": "關閉"},
-    {"id": 6, "name": "拒絕"}
+    {"id": 1, "name": "New"},
+    {"id": 2, "name": "In Progress"},
+    {"id": 3, "name": "Resolved"},
+    {"id": 4, "name": "Feedback"},
+    {"id": 5, "name": "Closed"},
+    {"id": 6, "name": "Rejected"}
   ]
 }
 ```
 
-### 用戶 (Users)
+### Users
 
-#### 取得當前用戶
+#### Get Current User
 ```bash
 curl -H "X-Redmine-API-Key: YOUR_KEY" \
      http://localhost:3000/users/current.json
 ```
 
-#### 取得所有用戶
+#### Get All Users
 ```bash
 curl -H "X-Redmine-API-Key: YOUR_KEY" \
      http://localhost:3000/users.json
 ```
 
-## 🔍 進階查詢
+## 🔍 Advanced Queries
 
-### 篩選和排序
+### Filtering and Sorting
 
-#### 按專案篩選議題
+#### Filter Issues by Project
 ```bash
 curl -H "X-Redmine-API-Key: YOUR_KEY" \
      "http://localhost:3000/issues.json?project_id=1"
 ```
 
-#### 按狀態篩選
+#### Filter by Status
 ```bash
 curl -H "X-Redmine-API-Key: YOUR_KEY" \
      "http://localhost:3000/issues.json?status_id=open"
 ```
 
-#### 分頁查詢
+#### Pagination
 ```bash
 curl -H "X-Redmine-API-Key: YOUR_KEY" \
      "http://localhost:3000/issues.json?limit=10&offset=0"
 ```
 
-#### 排序
+#### Sorting
 ```bash
 curl -H "X-Redmine-API-Key: YOUR_KEY" \
      "http://localhost:3000/issues.json?sort=updated_on:desc"
 ```
 
-#### 搜尋
+#### Search
 ```bash
 curl -H "X-Redmine-API-Key: YOUR_KEY" \
-     "http://localhost:3000/issues.json?subject=~測試"
+     "http://localhost:3000/issues.json?subject=~test"
 ```
 
-### 包含關聯資料
+### Include Related Data
 
-#### 包含專案資訊
+#### Include Project Info
 ```bash
 curl -H "X-Redmine-API-Key: YOUR_KEY" \
      "http://localhost:3000/issues.json?include=project"
 ```
 
-#### 包含多種資訊
+#### Include Multiple Info
 ```bash
 curl -H "X-Redmine-API-Key: YOUR_KEY" \
      "http://localhost:3000/issues/1.json?include=journals,watchers,attachments"
 ```
 
-## 🛠️ MCP 工具整合
+## 🛠️ MCP Tool Integration
 
-### 可用的 MCP 工具
+### Available MCP Tools
 
-#### 基本查詢工具
-- `server_info`: 伺服器資訊
-- `health_check`: 健康檢查
-- `get_projects`: 取得專案列表
-- `get_issue_statuses`: 取得議題狀態
+#### Basic Query Tools
+- `server_info`: Server info
+- `health_check`: Health check
+- `get_projects`: Get project list
+- `get_issue_statuses`: Get issue statuses
 
-#### 議題管理工具
-- `get_issue`: 取得議題詳情
-- `list_project_issues`: 列出專案議題
-- `search_issues`: 搜尋議題
-- `get_my_issues`: 取得我的議題
+#### Issue Management Tools
+- `get_issue`: Get issue details
+- `list_project_issues`: List project issues
+- `search_issues`: Search issues
+- `get_my_issues`: Get my issues
 
-#### 議題操作工具
-- `create_new_issue`: 建立新議題
-- `update_issue_content`: 更新議題內容
-- `update_issue_status`: 更新議題狀態
-- `add_issue_note`: 新增議題備註
-- `assign_issue`: 指派議題
-- `close_issue`: 關閉議題
+#### Issue Operation Tools
+- `create_new_issue`: Create new issue
+- `update_issue_content`: Update issue content
+- `update_issue_status`: Update issue status
+- `add_issue_note`: Add issue note
+- `assign_issue`: Assign issue
+- `close_issue`: Close issue
 
-### MCP 工具範例
+### MCP Tool Examples
 
-#### 使用 Python 直接呼叫
+#### Direct Python Call
 ```python
 from src.redmine_mcp.server import get_projects, create_new_issue
 
-# 取得專案列表
+# Get project list
 projects = get_projects()
 print(projects)
 
-# 建立新議題
+# Create new issue
 issue = create_new_issue(
     project_id=1,
-    subject="透過 MCP 建立的議題",
-    description="這是使用 MCP 工具建立的測試議題"
+    subject="Issue created via MCP",
+    description="This is a test issue created using MCP tools"
 )
 print(issue)
 ```
 
-#### 在 Claude Code 中使用
-1. 設定 MCP 配置
-2. 使用自然語言指令：
-   - "幫我建立一個新的議題"
-   - "列出所有開放的議題"
-   - "更新議題 #5 的狀態為已完成"
+#### Using in Claude Code
+1. Configure MCP settings
+2. Use natural language commands:
+   - "Help me create a new issue"
+   - "List all open issues"
+   - "Update issue #5 status to completed"
 
-## 📊 API 回應格式
+## 📊 API Response Format
 
-### 成功回應
+### Success Response
 ```json
 {
   "issue": {
     "id": 1,
     "project": {
       "id": 1,
-      "name": "MCP 測試專案"
+      "name": "MCP Test Project"
     },
-    "subject": "測試議題",
-    "description": "議題描述",
+    "subject": "Test Issue",
+    "description": "Issue description",
     "status": {
       "id": 1,
-      "name": "新建"
+      "name": "New"
     },
     "priority": {
       "id": 2,
-      "name": "普通"
+      "name": "Normal"
     },
     "author": {
       "id": 1,
@@ -299,87 +299,87 @@ print(issue)
 }
 ```
 
-### 錯誤回應
+### Error Response
 ```json
 {
   "errors": [
-    "主題不能為空白"
+    "Subject cannot be blank"
   ]
 }
 ```
 
-## 🚨 錯誤處理
+## 🚨 Error Handling
 
-### 常見 HTTP 狀態碼
+### Common HTTP Status Codes
 
-| 狀態碼 | 說明 | 解決方案 |
-|--------|------|----------|
-| 200 | 成功 | - |
-| 201 | 已建立 | - |
-| 401 | 未授權 | 檢查 API 金鑰 |
-| 403 | 禁止存取 | 檢查用戶權限 |
-| 404 | 找不到 | 檢查資源 ID |
-| 422 | 驗證錯誤 | 檢查必要欄位 |
-| 500 | 伺服器錯誤 | 檢查 Redmine 日誌 |
+| Status Code | Description | Solution |
+|-------------|-------------|----------|
+| 200 | Success | - |
+| 201 | Created | - |
+| 401 | Unauthorized | Check API key |
+| 403 | Forbidden | Check user permissions |
+| 404 | Not Found | Check resource ID |
+| 422 | Validation Error | Check required fields |
+| 500 | Server Error | Check Redmine logs |
 
-### 除錯技巧
+### Debugging Tips
 
-#### 啟用詳細日誌
+#### Enable Verbose Logging
 ```bash
 export REDMINE_MCP_LOG_LEVEL=DEBUG
 ```
 
-#### 檢查 API 回應
+#### Check API Response
 ```bash
 curl -v -H "X-Redmine-API-Key: YOUR_KEY" \
      http://localhost:3000/projects.json
 ```
 
-#### 檢查 Redmine 日誌
+#### Check Redmine Logs
 ```bash
 cd redmine/docker
 docker-compose logs redmine | grep -i error
 ```
 
-## 🔒 安全性考量
+## 🔒 Security Considerations
 
-### API 金鑰保護
-- 不要在程式碼中硬編碼 API 金鑰
-- 使用環境變數儲存敏感資訊
-- 定期更換 API 金鑰
+### API Key Protection
+- Do not hardcode API keys in code
+- Use environment variables to store sensitive information
+- Rotate API keys regularly
 
-### 權限控制
-- 為不同用途建立不同的用戶
-- 設定適當的專案權限
-- 使用最小權限原則
+### Access Control
+- Create different users for different purposes
+- Set appropriate project permissions
+- Use the principle of least privilege
 
-### 網路安全
-- 在生產環境中使用 HTTPS
-- 設定防火牆規則
-- 監控 API 使用情況
+### Network Security
+- Use HTTPS in production environments
+- Configure firewall rules
+- Monitor API usage
 
-## 📈 效能最佳化
+## 📈 Performance Optimization
 
-### 批次操作
+### Batch Operations
 ```python
-# 避免：逐一建立議題
+# Avoid: creating issues one by one
 for i in range(100):
-    create_issue(f"議題 {i}")
+    create_issue(f"Issue {i}")
 
-# 建議：使用批次 API（如果可用）
+# Recommended: use batch API (if available)
 batch_create_issues(issue_list)
 ```
 
-### 快取常用資料
+### Cache Frequently Used Data
 ```python
-# 快取專案列表
+# Cache project list
 projects_cache = get_projects()
 
-# 快取議題狀態
+# Cache issue statuses
 statuses_cache = get_issue_statuses()
 ```
 
-### 分頁處理
+### Pagination Handling
 ```python
 def get_all_issues():
     issues = []
@@ -396,27 +396,27 @@ def get_all_issues():
     return issues
 ```
 
-## 📚 參考資源
+## 📚 Reference Resources
 
-### 官方文件
-- [Redmine REST API 文件](https://www.redmine.org/projects/redmine/wiki/Rest_api)
-- [Redmine 使用手冊](https://www.redmine.org/projects/redmine/wiki/User_Guide)
+### Official Documentation
+- [Redmine REST API Documentation](https://www.redmine.org/projects/redmine/wiki/Rest_api)
+- [Redmine User Guide](https://www.redmine.org/projects/redmine/wiki/User_Guide)
 
-### 社群資源
-- [Redmine 論壇](https://www.redmine.org/boards)
+### Community Resources
+- [Redmine Forum](https://www.redmine.org/boards)
 - [Redmine GitHub](https://github.com/redmine/redmine)
 
-### 相關工具
-- [Postman Redmine 集合](https://www.postman.com/collections)
-- [Redmine Python 客戶端](https://pypi.org/project/python-redmine/)
+### Related Tools
+- [Postman Redmine Collection](https://www.postman.com/collections)
+- [Redmine Python Client](https://pypi.org/project/python-redmine/)
 
-## 🧪 測試 API
+## 🧪 Testing API
 
-### 測試腳本
+### Test Script
 ```python
 #!/usr/bin/env python3
 """
-API 功能測試腳本
+API functionality test script
 """
 import requests
 import json
@@ -429,14 +429,14 @@ HEADERS = {
 }
 
 def test_api():
-    # 測試連接
+    # Test connection
     response = requests.get(f"{BASE_URL}/projects.json", headers=HEADERS)
     assert response.status_code == 200
     
-    # 測試建立專案
+    # Test creating project
     project_data = {
         "project": {
-            "name": "API 測試專案",
+            "name": "API Test Project",
             "identifier": "api-test"
         }
     }
@@ -445,13 +445,13 @@ def test_api():
                            json=project_data)
     assert response.status_code == 201
     
-    print("✅ API 測試通過")
+    print("✅ API test passed")
 
 if __name__ == "__main__":
     test_api()
 ```
 
-### 執行測試
+### Run Tests
 ```bash
 cd redmine/scripts
 python api_test.py

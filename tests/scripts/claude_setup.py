@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-測試 Claude Code MCP 設定
+Test Claude Code MCP configuration
 """
 
 import json
@@ -10,11 +10,11 @@ import tempfile
 from pathlib import Path
 
 def test_mcp_config_generation():
-    """測試 MCP 配置檔案生成"""
-    print("📋 測試 MCP 配置檔案生成...")
+    """Test MCP configuration file generation"""
+    print("📋 Testing MCP configuration file generation...")
     
     try:
-        # 創建測試配置
+        # Create test configuration
         config = {
             "mcpServers": {
                 "redmine": {
@@ -29,72 +29,72 @@ def test_mcp_config_generation():
             }
         }
         
-        # 寫入臨時檔案
+        # Write to temporary file
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
             json.dump(config, f, indent=2)
             temp_path = f.name
         
-        # 驗證 JSON 格式
+        # Validate JSON format
         with open(temp_path, 'r') as f:
             loaded_config = json.load(f)
         
-        print("✅ MCP 配置檔案格式正確")
-        print(f"   配置包含 {len(loaded_config['mcpServers'])} 個 MCP 服務器")
-        print(f"   Redmine 服務器配置: {loaded_config['mcpServers']['redmine']['command']}")
+        print("✅ MCP configuration file format correct")
+        print(f"   Configuration contains {len(loaded_config['mcpServers'])} MCP servers")
+        print(f"   Redmine server configuration: {loaded_config['mcpServers']['redmine']['command']}")
         
-        # 清理臨時檔案
+        # Clean up temporary file
         os.unlink(temp_path)
         
         return True
         
     except Exception as e:
-        print(f"❌ MCP 配置檔案生成失敗: {e}")
+        print(f"❌ MCP configuration file generation failed: {e}")
         return False
 
 def test_command_execution():
-    """測試命令執行"""
-    print("\n🔧 測試命令執行...")
+    """Test command execution"""
+    print("\n🔧 Testing command execution...")
     
     try:
-        # 檢查 redmine-mcp 命令是否存在
+        # Check if redmine-mcp command exists
         uv_bin_path = Path.home() / ".local" / "bin" / "redmine-mcp"
         
         if not uv_bin_path.exists():
-            print("❌ redmine-mcp 命令不存在")
+            print("❌ redmine-mcp command does not exist")
             return False
         
-        print(f"✅ 找到命令: {uv_bin_path}")
+        print(f"✅ Found command: {uv_bin_path}")
         
-        # 測試命令可執行性（不實際執行，因為會等待 stdio）
+        # Test command executability (don't actually execute, as it will wait for stdio)
         if os.access(uv_bin_path, os.X_OK):
-            print("✅ 命令具有執行權限")
+            print("✅ Command has execution permission")
             return True
         else:
-            print("❌ 命令沒有執行權限")
+            print("❌ Command does not have execution permission")
             return False
             
     except Exception as e:
-        print(f"❌ 命令執行測試失敗: {e}")
+        print(f"❌ Command execution test failed: {e}")
         return False
 
 def generate_setup_instructions():
-    """生成設定說明"""
-    print("\n📖 生成 Claude Code 設定說明...")
+    """Generate setup instructions"""
+    print("\n📖 Generating Claude Code setup instructions...")
     
     try:
-        # 找到安裝路徑
+        # Find installation path
         uv_bin_path = Path.home() / ".local" / "bin" / "redmine-mcp"
         
         instructions = f"""
-Claude Code MCP 設定說明
+Claude Code MCP Setup Instructions
 ========================
 
-1. 確認安裝
-   命令位置: {uv_bin_path}
-   狀態: {'✅ 已安裝' if uv_bin_path.exists() else '❌ 未安裝'}
+1. Verify installation
+   Command location: {uv_bin_path}
+   Status: {'✅ Installed' if uv_bin_path.exists() else '❌ Not installed'}
 
-2. 手動添加到 Claude Code
-   執行以下命令將 Redmine MCP 添加到 Claude Code：
+2. Manually add to Claude Code
+   Run the following command to add Redmine MCP to Claude Code:
 
    ```bash
    claude mcp add redmine "{uv_bin_path}" \\
@@ -102,13 +102,13 @@ Claude Code MCP 設定說明
      -e REDMINE_API_KEY="your_api_key_here"
    ```
 
-3. 或者手動編輯 MCP 配置檔案
+3. Or manually edit MCP configuration file
    
-   配置檔案位置:
+   Configuration file location:
    - macOS/Linux: ~/.config/claude-code/mcp_servers.json
    - Windows: %APPDATA%\\claude-code\\mcp_servers.json
    
-   配置內容:
+   Configuration content:
    ```json
    {{
      "mcpServers": {{
@@ -125,31 +125,31 @@ Claude Code MCP 設定說明
    }}
    ```
 
-4. 重啟 Claude Code
-   設定完成後，重新啟動 Claude Code 以載入 MCP 服務器。
+4. Restart Claude Code
+   After setup is complete, restart Claude Code to load the MCP server.
 
-5. 驗證設定
-   在 Claude Code 中輸入: "請執行健康檢查"
-   如果看到 Redmine 連線狀態回應，表示設定成功。
+5. Verify setup
+   Enter in Claude Code: "Please run a health check"
+   If you see a Redmine connection status response, the setup is successful.
 """
         
         print(instructions)
         
-        # 寫入檔案
+        # Write to file
         setup_file = Path("CLAUDE_SETUP.md")
         with open(setup_file, 'w', encoding='utf-8') as f:
             f.write(instructions)
         
-        print(f"✅ 設定說明已儲存到: {setup_file}")
+        print(f"✅ Setup instructions saved to: {setup_file}")
         return True
         
     except Exception as e:
-        print(f"❌ 設定說明生成失敗: {e}")
+        print(f"❌ Setup instructions generation failed: {e}")
         return False
 
 def main():
-    """主要測試流程"""
-    print("🔗 Claude Code MCP 設定測試")
+    """Main test flow"""
+    print("🔗 Claude Code MCP Setup Test")
     print("=" * 50)
     
     tests = [
@@ -165,19 +165,19 @@ def main():
         if test():
             passed += 1
     
-    print(f"\n📊 測試結果摘要")
+    print(f"\n📊 Test Result Summary")
     print("=" * 50)
-    print(f"總測試數: {total}")
-    print(f"通過: {passed}")
-    print(f"失敗: {total - passed}")
-    print(f"成功率: {(passed/total)*100:.1f}%")
+    print(f"Total tests: {total}")
+    print(f"Passed: {passed}")
+    print(f"Failed: {total - passed}")
+    print(f"Success rate: {(passed/total)*100:.1f}%")
     
     if passed == total:
-        print("\n🎉 Claude Code 設定測試通過！")
-        print("💡 請參考 CLAUDE_SETUP.md 完成 Claude Code 整合設定")
+        print("\n🎉 Claude Code setup test passed!")
+        print("💡 Please refer to CLAUDE_SETUP.md to complete Claude Code integration setup")
         return 0
     else:
-        print(f"\n⚠️  有 {total - passed} 個測試失敗")
+        print(f"\n⚠️  {total - passed} test(s) failed")
         return 1
 
 if __name__ == "__main__":

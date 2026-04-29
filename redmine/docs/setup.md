@@ -1,104 +1,104 @@
-# Redmine 環境設定詳細說明
+# Redmine Environment Setup Detailed Guide
 
-本文件提供 Redmine 測試環境的詳細設定步驟和故障排除說明。
+This document provides detailed setup steps and troubleshooting instructions for the Redmine test environment.
 
-## 📋 前置需求
+## 📋 Prerequisites
 
-### 系統需求
-- **作業系統**: macOS, Linux, Windows (with WSL2)
-- **記憶體**: 至少 2GB 可用
-- **磁碟空間**: 至少 1GB
-- **網路**: 需要網際網路連線下載 Docker 映像
+### System Requirements
+- **Operating System**: macOS, Linux, Windows (with WSL2)
+- **Memory**: At least 2GB available
+- **Disk Space**: At least 1GB
+- **Network**: Internet connection required to download Docker images
 
-### 必要軟體
+### Required Software
 - **Docker**: >= 20.10
-- **Docker Compose**: >= 2.0 (或 docker-compose >= 1.29)
-- **Python**: >= 3.8 (用於設定腳本)
-- **curl**: 用於健康檢查
+- **Docker Compose**: >= 2.0 (or docker-compose >= 1.29)
+- **Python**: >= 3.8 (for setup scripts)
+- **curl**: for health checks
 
-### 檢查安裝
+### Check Installation
 ```bash
-# 檢查 Docker
+# Check Docker
 docker --version
-docker-compose --version  # 或 docker compose version
+docker-compose --version  # or docker compose version
 
-# 檢查 Python
+# Check Python
 python3 --version
 
-# 檢查 curl
+# Check curl
 curl --version
 ```
 
-## 🚀 安裝步驟
+## 🚀 Installation Steps
 
-### 步驟 1: 準備環境
+### Step 1: Prepare Environment
 
 ```bash
-# 確保沒有其他服務佔用端口 3000
+# Ensure no other service is using port 3000
 lsof -i :3000
 
-# 如果有服務在運行，停止它
+# If a service is running, stop it
 sudo kill -9 $(lsof -ti:3000)
 ```
 
-### 步驟 2: 啟動 Redmine
+### Step 2: Start Redmine
 
 ```bash
-# 方法 1: 使用便捷腳本（推薦）
+# Method 1: Use convenient script (recommended)
 ./redmine/scripts/setup.sh
 
-# 方法 2: 手動啟動
+# Method 2: Manual start
 cd redmine/docker
 docker-compose up -d
 ```
 
-### 步驟 3: 驗證啟動
+### Step 3: Verify Startup
 
 ```bash
-# 檢查容器狀態
+# Check container status
 docker-compose ps
 
-# 檢查 Redmine 日誌
+# Check Redmine logs
 docker-compose logs redmine
 
-# 測試 Web 介面
+# Test web interface
 curl -I http://localhost:3000
 ```
 
-預期輸出：
+Expected output:
 ```
 HTTP/1.1 200 OK
 ```
 
-### 步驟 4: 初始設定
+### Step 4: Initial Setup
 
-#### 4.1 Web 介面設定
-1. 開啟瀏覽器前往 http://localhost:3000
-2. 使用帳號密碼 `admin` / `admin` 登入
-3. 首次登入時會要求更改密碼（可跳過）
+#### 4.1 Web Interface Setup
+1. Open browser and go to http://localhost:3000
+2. Log in with username/password `admin` / `admin`
+3. You will be asked to change password on first login (can be skipped)
 
-#### 4.2 API 設定
+#### 4.2 API Setup
 ```bash
-# 自動設定（推薦）
+# Automatic setup (recommended)
 cd redmine/scripts
 python configure.py
 
-# 手動設定
+# Manual setup
 python manual_api_setup.py
 ```
 
-### 步驟 5: 建立測試資料
+### Step 5: Create Test Data
 
-自動設定腳本會建立：
-- **MCP 測試專案** (`mcp-test`)
-- **軟體開發** (`software-dev`)  
-- **Bug 追蹤** (`bug-tracking`)
+The auto-configuration script will create:
+- **MCP Test Project** (`mcp-test`)
+- **Software Development** (`software-dev`)
+- **Bug Tracking** (`bug-tracking`)
 
-每個專案包含 5 個不同狀態的測試議題。
+Each project contains 5 test issues of different statuses.
 
-## ⚙️ 詳細配置
+## ⚙️ Detailed Configuration
 
-### Docker Compose 說明
+### Docker Compose Description
 
 ```yaml
 # redmine/docker/docker-compose.yml
@@ -131,17 +131,17 @@ services:
       - ./init:/docker-entrypoint-initdb.d
 ```
 
-### 環境變數設定
+### Environment Variable Setup
 
 ```bash
-# 複製範例配置
+# Copy example configuration
 cp redmine/configs/.env.example .env
 
-# 編輯配置（可選）
+# Edit configuration (optional)
 vim .env
 ```
 
-範例內容：
+Example content:
 ```bash
 REDMINE_DOMAIN=http://localhost:3000
 REDMINE_API_KEY=your_api_key_here
@@ -149,63 +149,63 @@ REDMINE_MCP_TIMEOUT=30
 REDMINE_MCP_LOG_LEVEL=INFO
 ```
 
-## 🔧 進階設定
+## 🔧 Advanced Settings
 
-### 修改端口
+### Change Port
 
-如果端口 3000 被佔用：
+If port 3000 is occupied:
 
 ```yaml
-# 編輯 redmine/docker/docker-compose.yml
+# Edit redmine/docker/docker-compose.yml
 services:
   redmine:
     ports:
-      - "3001:3000"  # 改為其他端口
+      - "3001:3000"  # Change to another port
 ```
 
-對應的環境變數也需要更新：
+The corresponding environment variable also needs to be updated:
 ```bash
 REDMINE_DOMAIN=http://localhost:3001
 ```
 
-### 資料持久化
+### Data Persistence
 
-Docker 卷會自動建立：
-- `redmine_db_data`: 資料庫資料
-- `redmine_data`: Redmine 檔案
-- `redmine_plugins`: Redmine 插件
+Docker volumes are automatically created:
+- `redmine_db_data`: Database data
+- `redmine_data`: Redmine files
+- `redmine_plugins`: Redmine plugins
 
-### 自訂初始化
+### Custom Initialization
 
-在 `redmine/docker/init/` 目錄放置初始化腳本：
+Place initialization scripts in the `redmine/docker/init/` directory:
 ```bash
-# 範例：建立初始用戶
+# Example: create initial user
 echo "CREATE USER 'testuser'@'%' IDENTIFIED BY 'testpass';" > redmine/docker/init/01-users.sql
 ```
 
-## 🐛 故障排除
+## 🐛 Troubleshooting
 
-### 常見問題
+### Common Issues
 
-#### Q1: Docker 容器啟動失敗
+#### Q1: Docker container fails to start
 ```bash
-# 檢查 Docker 服務狀態
+# Check Docker service status
 docker info
 
-# 檢查端口佔用
+# Check port usage
 lsof -i :3000
 
-# 查看詳細錯誤
+# View detailed errors
 docker-compose logs
 ```
 
-#### Q2: Redmine 啟動時間過長
+#### Q2: Redmine startup takes too long
 ```bash
-# 正常啟動需要 60-90 秒，可查看進度
+# Normal startup takes 60-90 seconds, you can check progress
 docker-compose logs -f redmine
 ```
 
-預期的啟動日誌：
+Expected startup logs:
 ```
 redmine-app | => Booting WEBrick
 redmine-app | => Rails 6.1.4 application starting
@@ -214,66 +214,66 @@ redmine-app | => Migrating database
 redmine-app | => Rails application started on 0.0.0.0:3000
 ```
 
-#### Q3: 無法連接到 Redmine
+#### Q3: Cannot connect to Redmine
 ```bash
-# 檢查容器狀態
+# Check container status
 docker-compose ps
 
-# 測試網路連接
+# Test network connection
 curl -v http://localhost:3000
 
-# 檢查防火牆設定（macOS）
+# Check firewall settings (macOS)
 sudo pfctl -s all
 ```
 
-#### Q4: API 設定失敗
+#### Q4: API setup failed
 ```bash
-# 手動取得 API 金鑰
-# 1. 登入 http://localhost:3000
-# 2. 前往 我的帳戶 > API 存取金鑰
-# 3. 點擊 '顯示'
+# Get API key manually
+# 1. Log in to http://localhost:3000
+# 2. Go to My Account > API Access Key
+# 3. Click 'Show'
 
-# 測試 API 連接
+# Test API connection
 python redmine/scripts/manual_api_setup.py
 ```
 
-#### Q5: 資料庫連接錯誤
+#### Q5: Database connection error
 ```bash
-# 檢查 MySQL 容器
+# Check MySQL container
 docker-compose logs redmine-db
 
-# 重啟 MySQL 容器
+# Restart MySQL container
 docker-compose restart redmine-db
 
-# 完全重建
+# Full rebuild
 docker-compose down -v
 docker-compose up -d
 ```
 
-### 日誌分析
+### Log Analysis
 
-#### 查看所有服務日誌
+#### View all service logs
 ```bash
 docker-compose logs
 ```
 
-#### 查看特定服務日誌
+#### View specific service logs
 ```bash
-# Redmine 應用日誌
+# Redmine application logs
 docker-compose logs redmine
 
-# MySQL 資料庫日誌
+# MySQL database logs
 docker-compose logs redmine-db
 
-# 實時追蹤日誌
+# Follow logs in real-time
 docker-compose logs -f redmine
 ```
 
-### 效能調整
+### Performance Tuning
 
-#### 分配更多記憶體
+#### Allocate More Memory
 ```yaml
-# 編輯 docker-compose.yml
+# Edit docker-compose.yml
 services:
   redmine:
     deploy:
@@ -284,137 +284,137 @@ services:
           memory: 512M
 ```
 
-#### 使用 SSD 儲存
+#### Use SSD Storage
 ```bash
-# 確保 Docker 資料位於 SSD
+# Ensure Docker data is on SSD
 docker info | grep "Docker Root Dir"
 ```
 
-## 🔄 重設環境
+## 🔄 Reset Environment
 
-### 完全重設
+### Full Reset
 ```bash
-# 停止並刪除所有容器和資料
+# Stop and delete all containers and data
 cd redmine/docker
 docker-compose down -v
 
-# 清理 Docker 資源
+# Clean up Docker resources
 docker system prune -f
 
-# 重新啟動
+# Restart
 cd ../scripts
 ./setup.sh
 ```
 
-### 保留資料重啟
+### Restart with Data Preserved
 ```bash
 cd redmine/docker
 docker-compose restart
 ```
 
-### 只重建 Redmine 容器
+### Rebuild Only Redmine Container
 ```bash
 cd redmine/docker
 docker-compose up -d --force-recreate redmine
 ```
 
-## 📊 健康檢查
+## 📊 Health Check
 
-建立健康檢查腳本：
+Create health check script:
 ```bash
 #!/bin/bash
 # redmine/scripts/health_check.sh
 
-echo "🔍 Redmine 健康檢查"
-echo "==================="
+echo "🔍 Redmine Health Check"
+echo "======================="
 
-# 檢查容器狀態
-echo "📦 容器狀態:"
+# Check container status
+echo "📦 Container status:"
 docker-compose -f redmine/docker/docker-compose.yml ps
 
-# 檢查網路連接
+# Check network connection
 echo ""
-echo "🌐 網路連接:"
+echo "🌐 Network connection:"
 if curl -s http://localhost:3000 > /dev/null; then
-    echo "✅ Redmine Web 介面正常"
+    echo "✅ Redmine web interface is normal"
 else
-    echo "❌ Redmine Web 介面無法連接"
+    echo "❌ Redmine web interface cannot be connected"
 fi
 
-# 檢查 API
+# Check API
 echo ""
-echo "🔌 API 連接:"
+echo "🔌 API connection:"
 if [ -f .env ]; then
     source .env
     if [ ! -z "$REDMINE_API_KEY" ]; then
         if curl -s -H "X-Redmine-API-Key: $REDMINE_API_KEY" http://localhost:3000/projects.json > /dev/null; then
-            echo "✅ Redmine API 正常"
+            echo "✅ Redmine API is normal"
         else
-            echo "❌ Redmine API 無法連接"
+            echo "❌ Redmine API cannot be connected"
         fi
     else
-        echo "⚠️  API 金鑰未設定"
+        echo "⚠️  API key not set"
     fi
 else
-    echo "⚠️  .env 檔案不存在"
+    echo "⚠️  .env file does not exist"
 fi
 ```
 
-## 🚀 自動化部署
+## 🚀 Automated Deployment
 
-建立自動化部署腳本：
+Create automated deployment script:
 ```bash
 #!/bin/bash
 # redmine/scripts/deploy.sh
 
 set -e
 
-echo "🚀 自動化 Redmine 部署"
+echo "🚀 Automated Redmine Deployment"
 echo "====================="
 
-# 檢查前置需求
+# Check prerequisites
 ./redmine/scripts/health_check.sh
 
-# 啟動環境
+# Start environment
 ./redmine/scripts/setup.sh
 
-# 配置資料
+# Configure data
 cd redmine/scripts
 python configure.py
 
-# 驗證安裝
+# Verify installation
 python manual_api_setup.py
 
-echo "✅ Redmine 環境部署完成！"
+echo "✅ Redmine environment deployment complete!"
 ```
 
-## 📝 開發工作流程
+## 📝 Development Workflow
 
-### 日常開發
+### Daily Development
 ```bash
-# 1. 啟動環境
+# 1. Start environment
 ./redmine/scripts/setup.sh
 
-# 2. 開發 MCP 功能
+# 2. Develop MCP features
 vim src/redmine_mcp/server.py
 
-# 3. 測試功能
+# 3. Test features
 python tests/scripts/mcp_integration.py
 
-# 4. 停止環境
+# 4. Stop environment
 cd redmine/docker
 docker-compose down
 ```
 
-### 版本升級
+### Version Upgrade
 ```bash
-# 1. 備份資料
+# 1. Backup data
 docker run --rm -v redmine_db_data:/source -v $(pwd):/backup alpine tar czf /backup/redmine_backup.tar.gz -C /source .
 
-# 2. 更新映像版本
-# 編輯 docker-compose.yml 中的版本號
+# 2. Update image version
+# Edit docker-compose.yml version number
 
-# 3. 重建服務
+# 3. Rebuild services
 docker-compose down
 docker-compose pull
 docker-compose up -d

@@ -1,439 +1,439 @@
-# 使用範例
+# Usage Examples
 
-本文件提供 Redmine MCP Server 的詳細使用範例，包含在 Claude Code 中的實際對話範例。
+This document provides detailed usage examples for the Redmine MCP Server, including actual conversation examples in Claude Code.
 
-## 📋 目錄
+## 📋 Table of Contents
 
-1. [基本操作](#基本操作)
-2. [議題管理](#議題管理)
-3. [專案管理](#專案管理)
-4. [搜尋功能](#搜尋功能)
-5. [高級用法](#高級用法)
+1. [Basic Operations](#basic-operations)
+2. [Issue Management](#issue-management)
+3. [Project Management](#project-management)
+4. [Search Features](#search-features)
+5. [Advanced Usage](#advanced-usage)
 
-## 🔧 基本操作
+## 🔧 Basic Operations
 
-### 檢查服務狀態
+### Check Service Status
 
-**用戶輸入：**
+**User Input:**
 ```
-請檢查 Redmine MCP 服務器狀態
-```
-
-**Claude 回應：**
-```
-✓ 服務器正常運作，已連接到 https://your-redmine.com
+Please check Redmine MCP server status
 ```
 
-### 取得服務器資訊
-
-**用戶輸入：**
+**Claude Response:**
 ```
-顯示服務器資訊
+✓ Server is running normally, connected to https://your-redmine.com
 ```
 
-**Claude 回應：**
-```
-Redmine MCP 服務器已啟動
-- Redmine 網域: https://your-redmine.com
-- 除錯模式: false
-- API 逾時: 30秒
-```
+### Get Server Information
 
-## 📝 議題管理
-
-### 查看議題詳情
-
-**用戶輸入：**
+**User Input:**
 ```
-取得議題 #123 的詳細資訊
+Show server information
 ```
 
-**Claude 回應：**
+**Claude Response:**
 ```
-議題 #123: 修復用戶登入問題
-
-基本資訊:
-- 專案: 電商網站 (ID: 1)
-- 追蹤器: Bug
-- 狀態: 進行中
-- 優先級: 高
-- 建立者: 張三
-- 指派給: 李四
-- 完成度: 30%
-- 建立時間: 2024-01-15
-- 更新時間: 2024-01-20
-
-描述:
-用戶回報無法正常登入系統，錯誤訊息顯示「Invalid credentials」
+Redmine MCP Server is running
+- Redmine Domain: https://your-redmine.com
+- Debug Mode: false
+- API Timeout: 30 seconds
 ```
 
-### 建立新議題
+## 📝 Issue Management
 
-**用戶輸入：**
+### View Issue Details
+
+**User Input:**
 ```
-在專案 ID 1 中建立新議題：
-- 標題：優化搜尋功能效能
-- 描述：目前搜尋回應時間過長，需要進行效能優化
-- 追蹤器 ID：2 (功能)
-- 優先級 ID：3 (中)
+Get detailed information for issue #123
 ```
 
-**Claude 回應：**
+**Claude Response:**
 ```
-新議題建立成功!
+Issue #123: Fix User Login Issue
 
-議題 ID: #156
-標題: 優化搜尋功能效能
-專案: 電商網站
-追蹤器: 功能
-狀態: 新建
-優先級: 中
-指派給: 未指派
+Basic Information:
+- Project: E-commerce Website (ID: 1)
+- Tracker: Bug
+- Status: In Progress
+- Priority: High
+- Created by: Zhang San
+- Assigned to: Li Si
+- Completion: 30%
+- Created: 2024-01-15
+- Updated: 2024-01-20
 
-描述:
-目前搜尋回應時間過長，需要進行效能優化
-```
-
-### 更新議題狀態
-
-**用戶輸入：**
-```
-將議題 #123 狀態更新為「已解決」，並加上備註「已修復登入驗證邏輯」
+Description:
+Users report inability to log in to the system normally, error message shows "Invalid credentials"
 ```
 
-**Claude 回應：**
-```
-議題狀態更新成功!
+### Create New Issue
 
-議題: #123 - 修復用戶登入問題
-新狀態: 已解決
-備註: 已修復登入驗證邏輯
+**User Input:**
 ```
-
-### 更新議題內容
-
-**用戶輸入：**
-```
-更新議題 #156 的完成度為 60%，並修改描述為「已完成初步效能分析」
+Create a new issue in project ID 1:
+- Title: Optimize search performance
+- Description: Current search response time is too long, performance optimization needed
+- Tracker ID: 2 (Feature)
+- Priority ID: 3 (Medium)
 ```
 
-**Claude 回應：**
+**Claude Response:**
 ```
-議題內容更新成功!
+New issue created successfully!
 
-議題: #156 - 優化搜尋功能效能
-已更新的欄位:
-- 描述已更新
-- 完成度: 60%
+Issue ID: #156
+Title: Optimize search performance
+Project: E-commerce Website
+Tracker: Feature
+Status: New
+Priority: Medium
+Assigned to: Unassigned
 
-目前狀態:
-- 狀態: 進行中
-- 優先級: 中
-- 完成度: 60%
-```
-
-### 指派議題
-
-**用戶輸入：**
-```
-將議題 #156 指派給用戶 ID 5，備註「請協助進行效能測試」
+Description:
+Current search response time is too long, performance optimization needed
 ```
 
-**Claude 回應：**
-```
-議題指派更新成功!
+### Update Issue Status
 
-議題: #156 - 優化搜尋功能效能
-動作: 指派給用戶 ID 5
-目前指派給: 王五
-備註: 請協助進行效能測試
+**User Input:**
+```
+Update issue #123 status to "Resolved", and add note "Login verification logic has been fixed"
 ```
 
-### 新增議題備註
-
-**用戶輸入：**
+**Claude Response:**
 ```
-為議題 #123 新增備註「測試結果：登入功能正常運作」
-```
+Issue status updated successfully!
 
-**Claude 回應：**
-```
-備註新增成功!
-
-議題: #123 - 修復用戶登入問題
-備註類型: 公開
-備註內容:
-測試結果：登入功能正常運作
+Issue: #123 - Fix User Login Issue
+New Status: Resolved
+Note: Login verification logic has been fixed
 ```
 
-### 關閉議題
+### Update Issue Content
 
-**用戶輸入：**
+**User Input:**
 ```
-關閉議題 #123，完成度設為 100%，備註「問題已解決並通過測試」
-```
-
-**Claude 回應：**
-```
-議題關閉成功!
-
-議題: #123 - 修復用戶登入問題
-狀態: 已關閉
-完成度: 100%
-關閉備註: 問題已解決並通過測試
+Update issue #156 completion percentage to 60%, and change description to "Preliminary performance analysis completed"
 ```
 
-## 🗂️ 專案管理
-
-### 取得專案列表
-
-**用戶輸入：**
+**Claude Response:**
 ```
-顯示所有可存取的專案
+Issue content updated successfully!
+
+Issue: #156 - Optimize search performance
+Updated Fields:
+- Description updated
+- Completion: 60%
+
+Current Status:
+- Status: In Progress
+- Priority: Medium
+- Completion: 60%
 ```
 
-**Claude 回應：**
-```
-找到 3 個專案:
+### Assign Issue
 
-ID    識別碼               名稱                           狀態   
+**User Input:**
+```
+Assign issue #156 to user ID 5, note "Please assist with performance testing"
+```
+
+**Claude Response:**
+```
+Issue assignment updated successfully!
+
+Issue: #156 - Optimize search performance
+Action: Assigned to user ID 5
+Currently assigned to: Wang Wu
+Note: Please assist with performance testing
+```
+
+### Add Issue Note
+
+**User Input:**
+```
+Add note "Test results: login function working normally" to issue #123
+```
+
+**Claude Response:**
+```
+Note added successfully!
+
+Issue: #123 - Fix User Login Issue
+Note Type: Public
+Note Content:
+Test results: login function working normally
+```
+
+### Close Issue
+
+**User Input:**
+```
+Close issue #123, set completion to 100%, note "Issue resolved and tested"
+```
+
+**Claude Response:**
+```
+Issue closed successfully!
+
+Issue: #123 - Fix User Login Issue
+Status: Closed
+Completion: 100%
+Close Note: Issue resolved and tested
+```
+
+## 🗂️ Project Management
+
+### Get Project List
+
+**User Input:**
+```
+Show all accessible projects
+```
+
+**Claude Response:**
+```
+Found 3 projects:
+
+ID    Identifier           Name                           Status
 ----- -------------------- ------------------------------ ----
-1     ecommerce-website    電商網站                        正常   
-2     mobile-app           行動應用程式                    正常   
-3     internal-tools       內部工具                        封存   
+1     ecommerce-website    E-commerce Website             Active
+2     mobile-app           Mobile Application             Active
+3     internal-tools       Internal Tools                 Archived
 ```
 
-### 列出專案議題
+### List Project Issues
 
-**用戶輸入：**
+**User Input:**
 ```
-顯示專案 1 中所有開放的議題，限制 10 筆
+Show all open issues in project 1, limit 10
 ```
 
-**Claude 回應：**
+**Claude Response:**
 ```
-專案: 電商網站
-狀態篩選: open
-找到 8 個議題:
+Project: E-commerce Website
+Status Filter: open
+Found 8 issues:
 
-ID       標題                                     狀態         指派給          更新時間  
+ID       Title                                     Status       Assigned to     Updated
 -------- ---------------------------------------- ------------ --------------- ----------
-156      優化搜尋功能效能                          進行中        王五            2024-01-20
-154      新增購物車提醒功能                        新建          未指派          2024-01-19
-152      修復商品圖片載入問題                      進行中        李四            2024-01-18
+156      Optimize search performance               In Progress  Wang Wu         2024-01-20
+154      Add shopping cart reminder feature        New          Unassigned      2024-01-19
+152      Fix product image loading issue           In Progress  Li Si           2024-01-18
 ```
 
-## 🔍 搜尋功能
+## 🔍 Search Features
 
-### 關鍵字搜尋
+### Keyword Search
 
-**用戶輸入：**
+**User Input:**
 ```
-搜尋包含「效能」關鍵字的議題
+Search for issues containing the keyword "performance"
 ```
 
-**Claude 回應：**
+**Claude Response:**
 ```
-搜尋關鍵字: '效能'
-找到 3 個相關議題:
+Search keyword: 'performance'
+Found 3 related issues:
 
-ID       標題                                 狀態         專案           
+ID       Title                                 Status       Project
 -------- ------------------------------------ ------------ ---------------
-156      優化搜尋功能效能                      進行中        電商網站       
-143      網站載入速度效能優化                  已解決        電商網站       
-128      資料庫查詢效能調整                    進行中        內部工具       
+156      Optimize search performance           In Progress  E-commerce Website
+143      Website loading speed optimization    Resolved     E-commerce Website
+128      Database query performance tuning     In Progress  Internal Tools
 ```
 
-### 專案內搜尋
+### Project-specific Search
 
-**用戶輸入：**
+**User Input:**
 ```
-在專案 1 中搜尋包含「登入」的議題
+Search for issues containing "login" in project 1
 ```
 
-**Claude 回應：**
+**Claude Response:**
 ```
-搜尋關鍵字: '登入'
-搜尋範圍: 專案 1
-找到 2 個相關議題:
+Search keyword: 'login'
+Search scope: Project 1
+Found 2 related issues:
 
-ID       標題                                 狀態         專案           
+ID       Title                                 Status       Project
 -------- ------------------------------------ ------------ ---------------
-123      修復用戶登入問題                      已關閉        電商網站       
-145      第三方登入整合                        新建          電商網站       
+123      Fix user login issue                  Closed       E-commerce Website
+145      Third-party login integration         New          E-commerce Website
 ```
 
-### 我的議題
+### My Issues
 
-**用戶輸入：**
+**User Input:**
 ```
-顯示指派給我的所有開放議題
+Show all open issues assigned to me
 ```
 
-**Claude 回應：**
+**Claude Response:**
 ```
-指派給 張三 的議題:
-狀態篩選: open
-找到 4 個議題:
+Issues assigned to Zhang San:
+Status Filter: open
+Found 4 issues:
 
-ID       標題                                 專案            狀態         更新時間  
+ID       Title                                 Project            Status       Updated
 -------- ------------------------------------ --------------- ------------ ----------
-161      實作用戶權限管理                      電商網站         新建          2024-01-21
-159      優化資料庫索引                        內部工具         進行中        2024-01-20
-157      更新 API 文件                         電商網站         進行中        2024-01-19
-155      修復手機版 UI 問題                    行動應用程式     新建          2024-01-18
+161      Implement user permission management  E-commerce Website New          2024-01-21
+159      Optimize database indexes             Internal Tools     In Progress  2024-01-20
+157      Update API documentation              E-commerce Website In Progress  2024-01-19
+155      Fix mobile UI issue                 Mobile Application New          2024-01-18
 ```
 
-## 🚀 高級用法
+## 🚀 Advanced Usage
 
-### 批量操作範例
+### Batch Operation Example
 
-**用戶輸入：**
+**User Input:**
 ```
-請幫我完成以下操作：
-1. 取得專案 1 中所有新建狀態的議題
-2. 將優先級為「高」的議題指派給用戶 ID 3
-3. 為每個指派的議題新增備註「已指派處理」
-```
-
-**Claude 會自動執行這些步驟：**
-
-```
-1. 正在取得專案 1 中的新建議題...
-
-專案: 電商網站
-狀態篩選: open
-找到 3 個新建議題:
-- #154: 新增購物車提醒功能 (優先級: 高)
-- #158: 更新商品分類頁面 (優先級: 中)
-- #160: 增加客戶評論功能 (優先級: 高)
-
-2. 正在指派優先級為「高」的議題...
-
-議題 #154 指派給用戶 ID 3 成功
-議題 #160 指派給用戶 ID 3 成功
-
-3. 正在新增備註...
-
-為議題 #154 新增備註成功
-為議題 #160 新增備註成功
-
-✅ 批量操作完成！已指派 2 個高優先級議題給用戶 ID 3。
+Please help me complete the following operations:
+1. Get all new status issues in project 1
+2. Assign issues with priority "High" to user ID 3
+3. Add note "Assigned for handling" to each assigned issue
 ```
 
-### 工作流程自動化
-
-**用戶輸入：**
-```
-幫我建立一個新的 Bug 報告工作流程：
-1. 建立議題「修復商品頁面載入錯誤」
-2. 設定為高優先級
-3. 指派給 QA 團隊負責人（用戶 ID 7）
-4. 新增初步分析備註
-```
-
-**Claude 執行流程：**
+**Claude will automatically execute these steps:**
 
 ```
-🔄 執行 Bug 報告工作流程...
+1. Getting new issues in project 1...
 
-步驟 1: 建立新議題
-新議題建立成功!
-議題 ID: #162
-標題: 修復商品頁面載入錯誤
+Project: E-commerce Website
+Status Filter: open
+Found 3 new issues:
+- #154: Add shopping cart reminder feature (Priority: High)
+- #158: Update product category page (Priority: Medium)
+- #160: Add customer review feature (Priority: High)
 
-步驟 2: 設定高優先級
-議題內容更新成功!
-已更新的欄位:
-- 優先級 ID: 4
+2. Assigning issues with priority "High"...
 
-步驟 3: 指派給 QA 負責人
-議題指派更新成功!
-目前指派給: QA-Leader
+Issue #154 assigned to user ID 3 successfully
+Issue #160 assigned to user ID 3 successfully
 
-步驟 4: 新增分析備註
-備註新增成功!
-備註內容: 需進行初步錯誤重現和環境分析
+3. Adding notes...
 
-✅ Bug 報告工作流程完成！議題 #162 已建立並準備開始處理。
+Note added to issue #154 successfully
+Note added to issue #160 successfully
+
+✅ Batch operation complete! 2 high priority issues assigned to user ID 3.
 ```
 
-## 📊 系統狀態查詢
+### Workflow Automation
 
-### 取得議題狀態清單
-
-**用戶輸入：**
+**User Input:**
 ```
-顯示所有可用的議題狀態
+Help me create a new Bug report workflow:
+1. Create issue "Fix product page loading error"
+2. Set to high priority
+3. Assign to QA team lead (user ID 7)
+4. Add preliminary analysis note
 ```
 
-**Claude 回應：**
-```
-可用的議題狀態:
+**Claude Execution Flow:**
 
-ID    名稱              已關閉
+```
+🔄 Executing Bug report workflow...
+
+Step 1: Create new issue
+New issue created successfully!
+Issue ID: #162
+Title: Fix product page loading error
+
+Step 2: Set high priority
+Issue content updated successfully!
+Updated Fields:
+- Priority ID: 4
+
+Step 3: Assign to QA lead
+Issue assignment updated successfully!
+Currently assigned to: QA-Leader
+
+Step 4: Add analysis note
+Note added successfully!
+Note content: Preliminary error reproduction and environment analysis needed
+
+✅ Bug report workflow complete! Issue #162 has been created and is ready to start processing.
+```
+
+## 📊 System Status Queries
+
+### Get Issue Status List
+
+**User Input:**
+```
+Show all available issue statuses
+```
+
+**Claude Response:**
+```
+Available issue statuses:
+
+ID    Name              Closed
 ----- --------------- --------
-1     新建             否      
-2     進行中           否      
-3     已解決           否      
-4     回饋中           否      
-5     已關閉           是      
-6     已拒絕           是      
+1     New             No
+2     In Progress     No
+3     Resolved        No
+4     Feedback        No
+5     Closed          Yes
+6     Rejected        Yes
 ```
 
-## 💡 最佳實務建議
+## 💡 Best Practices
 
-### 1. 議題描述撰寫
+### 1. Issue Description Writing
 ```
-建立議題時包含：
-- 問題現象描述
-- 重現步驟
-- 預期結果
-- 實際結果
-- 環境資訊
-```
-
-### 2. 狀態更新習慣
-```
-定期更新議題狀態並加上有意義的備註：
-- 說明目前進度
-- 遇到的問題
-- 下一步計畫
+When creating an issue, include:
+- Problem description
+- Reproduction steps
+- Expected results
+- Actual results
+- Environment information
 ```
 
-### 3. 搜尋技巧
+### 2. Status Update Habits
 ```
-使用具體關鍵字搜尋：
-- 功能名稱（如「登入」、「搜尋」）
-- 錯誤類型（如「500錯誤」、「載入失敗」）
-- 元件名稱（如「購物車」、「用戶介面」）
-```
-
-## 🔧 故障排除範例
-
-### 權限問題
-**錯誤訊息：**
-```
-權限不足：您沒有執行此操作的權限
+Regularly update issue status and add meaningful notes:
+- Explain current progress
+- Issues encountered
+- Next steps
 ```
 
-**解決方案：**
-1. 確認 API 金鑰對應的用戶有足夠權限
-2. 檢查專案是否為公開或用戶是否為專案成員
-3. 確認用戶角色設定
-
-### 連線問題
-**錯誤訊息：**
+### 3. Search Tips
 ```
-連線失敗：請檢查網路連線和 Redmine 伺服器狀態
+Use specific keywords to search:
+- Feature names (e.g., "login", "search")
+- Error types (e.g., "500 error", "loading failed")
+- Component names (e.g., "shopping cart", "user interface")
 ```
 
-**解決方案：**
-1. 檢查網路連線
-2. 確認 Redmine 服務器是否正常運作
-3. 檢查防火牆設定
-4. 調整逾時設定
+## 🔧 Troubleshooting Examples
+
+### Permission Issues
+**Error Message:**
+```
+Insufficient permissions: You do not have permission to perform this operation
+```
+
+**Solution:**
+1. Confirm the user corresponding to the API key has sufficient permissions
+2. Check if the project is public or if the user is a project member
+3. Confirm user role settings
+
+### Connection Issues
+**Error Message:**
+```
+Connection failed: Please check network connection and Redmine server status
+```
+
+**Solution:**
+1. Check network connection
+2. Confirm Redmine server is operating normally
+3. Check firewall settings
+4. Adjust timeout settings
 
 ---
 
-更多使用技巧和範例，請參考 [README.md](../README.md) 或開啟 Issue 詢問。
+For more usage tips and examples, please refer to [README.md](../README.md) or open an Issue to ask.

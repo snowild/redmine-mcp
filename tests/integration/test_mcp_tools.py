@@ -1,5 +1,5 @@
 """
-MCP 工具測試
+MCP tool tests
 """
 
 import os
@@ -10,20 +10,25 @@ from redmine_mcp.redmine_client import RedmineIssue, RedmineProject
 
 
 class TestMCPTools:
-    """MCP 工具測試"""
+    """MCP tool tests"""
     
     def setup_method(self):
-        """每個測試前的設置"""
-        # 確保有測試環境變數
+        """Setup before each test"""
+        # Ensure test environment variables are set
         with patch.dict(os.environ, {
             'REDMINE_DOMAIN': 'https://test.redmine.com',
             'REDMINE_API_KEY': 'test_api_key'
         }):
             pass
     
+    @patch('redmine_mcp.server.get_config')
     @patch('redmine_mcp.server.get_client')
-    def test_health_check_success(self, mock_get_client):
-        """測試健康檢查成功"""
+    def test_health_check_success(self, mock_get_client, mock_get_config):
+        """Test health check success"""
+        mock_config = Mock()
+        mock_config.redmine_domain = 'https://test.redmine.com'
+        mock_get_config.return_value = mock_config
+
         mock_client = Mock()
         mock_client.test_connection.return_value = True
         mock_get_client.return_value = mock_client
@@ -34,12 +39,12 @@ class TestMCPTools:
         }):
             result = health_check()
         
-        assert "✓ 服務器正常運作" in result
+        assert "✓ The server is functioning normally" in result
         assert "https://test.redmine.com" in result
     
     @patch('redmine_mcp.server.get_client')
     def test_health_check_connection_failed(self, mock_get_client):
-        """測試健康檢查連線失敗"""
+        """Test health check connection failure"""
         mock_client = Mock()
         mock_client.test_connection.return_value = False
         mock_get_client.return_value = mock_client
@@ -50,23 +55,23 @@ class TestMCPTools:
         }):
             result = health_check()
         
-        assert "✗ 無法連接到 Redmine 服務器" in result
+        assert "✗ Unable to connect to Redmine server" in result
     
     @patch('redmine_mcp.server.get_client')
     def test_get_issue_success(self, mock_get_client):
-        """測試取得議題成功"""
+        """Test getting issue successfully"""
         mock_client = Mock()
-        # 改為 mock get_issue_raw 方法，回傳字典格式
+        # Mock get_issue_raw method, returning dictionary format
         mock_issue_data = {
             'id': 123,
-            'subject': '測試議題',
-            'description': '議題描述',
-            'status': {'name': '新建'},
-            'priority': {'name': '正常'},
-            'project': {'name': '測試專案', 'id': 1},
+            'subject': 'Test Issue',
+            'description': 'Issue description',
+            'status': {'name': 'New'},
+            'priority': {'name': 'Normal'},
+            'project': {'name': 'Test Project', 'id': 1},
             'tracker': {'name': 'Bug'},
-            'author': {'name': '測試用戶'},
-            'assigned_to': {'name': '指派用戶'},
+            'author': {'name': 'Test User'},
+            'assigned_to': {'name': 'Assigned User'},
             'created_on': '2024-01-01T10:00:00Z',
             'updated_on': '2024-01-02T15:30:00Z',
             'done_ratio': 50
@@ -77,53 +82,57 @@ class TestMCPTools:
         
         result = get_issue(123)
         
-        assert "議題 #123: 測試議題" in result
-        assert "專案: 測試專案" in result
-        assert "狀態: 新建" in result
-        assert "完成度: 50%" in result
-        assert "議題描述" in result
+        assert "Issue #123: Test Issue" in result
+        assert "**Project**" in result
+        assert "Test Project (ID: 1)" in result
+        assert "**Status**" in result
+        assert "New" in result
+        assert "**Done ratio**" in result
+        assert "50%" in result
+        assert "## Description" in result
+        assert "Issue description" in result
     
     @patch('redmine_mcp.server.get_client')
     def test_get_issue_error(self, mock_get_client):
-        """測試取得議題錯誤"""
+        """Test getting issue error"""
         mock_client = Mock()
-        mock_client.get_issue_raw.side_effect = Exception("議題不存在")
+        mock_client.get_issue_raw.side_effect = Exception("Issue does not exist")
         mock_get_client.return_value = mock_client
         
         result = get_issue(999)
         
-        assert "系統錯誤" in result
-        assert "議題不存在" in result
+        assert "System error" in result
+        assert "Issue does not exist" in result
     
     @patch('redmine_mcp.server.get_client')
     def test_get_issue_with_notes_and_attachments(self, mock_get_client):
-        """測試取得議題包含備註和附件"""
+        """Test getting issue with notes and attachments"""
         mock_client = Mock()
-        # 模擬包含 journals 和 attachments 的議題資料
+        # Simulate issue data containing journals and attachments
         mock_issue_data = {
             'id': 123,
-            'subject': '測試議題',
-            'description': '議題描述',
-            'status': {'name': '新建'},
-            'priority': {'name': '正常'},
-            'project': {'name': '測試專案', 'id': 1},
+            'subject': 'Test Issue',
+            'description': 'Issue description',
+            'status': {'name': 'New'},
+            'priority': {'name': 'Normal'},
+            'project': {'name': 'Test Project', 'id': 1},
             'tracker': {'name': 'Bug'},
-            'author': {'name': '測試用戶'},
-            'assigned_to': {'name': '指派用戶'},
+            'author': {'name': 'Test User'},
+            'assigned_to': {'name': 'Assigned User'},
             'created_on': '2024-01-01T10:00:00Z',
             'updated_on': '2024-01-02T15:30:00Z',
             'done_ratio': 50,
             'journals': [
                 {
                     'id': 1,
-                    'user': {'name': '張三'},
-                    'notes': '這是第一個備註',
+                    'user': {'name': 'John'},
+                    'notes': 'This is the first note',
                     'created_on': '2024-01-01T11:00:00Z'
                 },
                 {
                     'id': 2,
-                    'user': {'name': '李四'},
-                    'notes': '這是第二個備註',
+                    'user': {'name': 'Jane'},
+                    'notes': 'This is the second note',
                     'created_on': '2024-01-01T12:00:00Z'
                 }
             ],
@@ -133,7 +142,7 @@ class TestMCPTools:
                     'filename': 'test.jpg',
                     'filesize': 1048576,  # 1MB
                     'content_type': 'image/jpeg',
-                    'author': {'name': '王五'},
+                    'author': {'name': 'Bob'},
                     'created_on': '2024-01-01T13:00:00Z'
                 },
                 {
@@ -141,7 +150,7 @@ class TestMCPTools:
                     'filename': 'document.pdf',
                     'filesize': 512000,  # 500KB
                     'content_type': 'application/pdf',
-                    'author': {'name': '趙六'},
+                    'author': {'name': 'Alice'},
                     'created_on': '2024-01-01T14:00:00Z'
                 }
             ]
@@ -152,45 +161,45 @@ class TestMCPTools:
         
         result = get_issue(123, include_details=True)
         
-        # 檢查基本資訊
-        assert "議題 #123: 測試議題" in result
+        # Check basic information
+        assert "Issue #123: Test Issue" in result
         
-        # 檢查附件資訊
-        assert "附件 (2 個)" in result
+        # Check attachment information
+        assert "## Attachment (2 )" in result
         assert "test.jpg" in result
         assert "1.00 MB" in result
         assert "image/jpeg" in result
         assert "document.pdf" in result
-        assert "512000 bytes" in result
+        assert "500.0 KB" in result
         assert "application/pdf" in result
-        assert "下載連結: https://test.redmine.com/attachments/download" in result
+        assert "| File name | Size | Type | Uploader | ID |" in result
         
-        # 檢查備註資訊
-        assert "備註/歷史記錄 (2 筆)" in result
-        assert "張三" in result
-        assert "這是第一個備註" in result
-        assert "李四" in result
-        assert "這是第二個備註" in result
+        # Check notes information
+        assert "## Remarks record (2 Pen)" in result
+        assert "John" in result
+        assert "This is the first note" in result
+        assert "Jane" in result
+        assert "This is the second note" in result
     
     @patch('redmine_mcp.server.get_client')
     def test_get_trackers_success(self, mock_get_client):
-        """測試取得追蹤器列表成功"""
+        """Test getting tracker list successfully"""
         mock_client = Mock()
         mock_trackers = [
             {
                 'id': 1,
-                'name': '缺陷',
-                'default_status': {'name': '新建'}
+                'name': 'Bug',
+                'default_status': {'name': 'New'}
             },
             {
                 'id': 2,
-                'name': '功能',
-                'default_status': {'name': '新建'}
+                'name': 'Feature',
+                'default_status': {'name': 'New'}
             },
             {
                 'id': 3,
-                'name': '支援',
-                'default_status': {'name': '新建'}
+                'name': 'Support',
+                'default_status': {'name': 'New'}
             }
         ]
         mock_client.get_trackers.return_value = mock_trackers
@@ -198,51 +207,51 @@ class TestMCPTools:
         
         result = get_trackers()
         
-        assert "可用的追蹤器" in result
-        assert "缺陷" in result
-        assert "功能" in result
-        assert "支援" in result
-        assert "新建" in result
+        assert "Available trackers:" in result
+        assert "Bug" in result
+        assert "Feature" in result
+        assert "Support" in result
+        assert "New" in result
     
     @patch('redmine_mcp.server.get_client')
     def test_get_trackers_empty(self, mock_get_client):
-        """測試追蹤器列表為空"""
+        """Test tracker list is empty"""
         mock_client = Mock()
         mock_client.get_trackers.return_value = []
         mock_get_client.return_value = mock_client
         
         result = get_trackers()
         
-        assert "沒有找到追蹤器" in result
+        assert "No tracker found" in result
     
     @patch('redmine_mcp.server.get_client')
     def test_get_priorities_success(self, mock_get_client):
-        """測試取得優先級列表成功"""
+        """Test getting priority list successfully"""
         mock_client = Mock()
         mock_priorities = [
             {
                 'id': 1,
-                'name': '低',
+                'name': 'Low',
                 'is_default': False
             },
             {
                 'id': 2,
-                'name': '正常',
+                'name': 'Normal',
                 'is_default': True
             },
             {
                 'id': 3,
-                'name': '高-這邊拜處理',
+                'name': 'High-Please handle this week',
                 'is_default': False
             },
             {
                 'id': 4,
-                'name': '速-這兩天處理',
+                'name': 'Fast-Handle within two days',
                 'is_default': False
             },
             {
                 'id': 5,
-                'name': '急-馬上處理',
+                'name': 'Urgent-Handle immediately',
                 'is_default': False
             }
         ]
@@ -251,84 +260,84 @@ class TestMCPTools:
         
         result = get_priorities()
         
-        assert "可用的議題優先級" in result
-        assert "低" in result
-        assert "正常" in result
-        assert "高-這邊拜處理" in result
-        assert "速-這兩天處理" in result
-        assert "急-馬上處理" in result
-        assert "是" in result  # 檢查預設標記
-        assert "否" in result
+        assert "Available issue priorities:" in result
+        assert "Low" in result
+        assert "Normal" in result
+        assert "High-Please handle this week" in result
+        assert "Fast-Handle within two days" in result
+        assert "Urgent-Handle immediately" in result
+        assert "yes" in result  # Check default marker
+        assert "no" in result
     
     @patch('redmine_mcp.server.get_client')
     def test_get_priorities_empty(self, mock_get_client):
-        """測試優先級列表為空"""
+        """Test priority list is empty"""
         mock_client = Mock()
         mock_client.get_priorities.return_value = []
         mock_get_client.return_value = mock_client
         
         result = get_priorities()
         
-        assert "沒有找到議題優先級" in result
+        assert "Issue priority not found" in result
     
     @patch('redmine_mcp.server.get_client')
     def test_get_time_entry_activities_success(self, mock_get_client):
-        """測試取得時間追蹤活動列表成功"""
+        """Test getting time entry activity list successfully"""
         mock_client = Mock()
         mock_activities = [
             {
                 'id': 1,
-                'name': '設計',
+                'name': 'Design',
                 'is_default': True
             },
             {
                 'id': 2,
-                'name': '開發',
+                'name': 'Development',
                 'is_default': False
             },
             {
                 'id': 3,
-                'name': '除錯',
+                'name': 'Debugging',
                 'is_default': False
             },
             {
                 'id': 4,
-                'name': '調查',
+                'name': 'Investigation',
                 'is_default': False
             },
             {
                 'id': 5,
-                'name': '討論',
+                'name': 'Discussion',
                 'is_default': False
             },
             {
                 'id': 6,
-                'name': '測試',
+                'name': 'Testing',
                 'is_default': False
             },
             {
                 'id': 7,
-                'name': '維護',
+                'name': 'Maintenance',
                 'is_default': False
             },
             {
                 'id': 8,
-                'name': '文件',
+                'name': 'Documentation',
                 'is_default': False
             },
             {
                 'id': 9,
-                'name': '教學',
+                'name': 'Teaching',
                 'is_default': False
             },
             {
                 'id': 10,
-                'name': '翻譯',
+                'name': 'Translation',
                 'is_default': False
             },
             {
                 'id': 11,
-                'name': '其他',
+                'name': 'Other',
                 'is_default': False
             }
         ]
@@ -337,55 +346,55 @@ class TestMCPTools:
         
         result = get_time_entry_activities()
         
-        assert "可用的時間追蹤活動" in result
-        assert "設計" in result
-        assert "開發" in result
-        assert "除錯" in result
-        assert "調查" in result
-        assert "討論" in result
-        assert "測試" in result
-        assert "維護" in result
-        assert "文件" in result
-        assert "教學" in result
-        assert "翻譯" in result
-        assert "其他" in result
-        assert "是" in result  # 檢查預設標記
-        assert "否" in result
+        assert "Available time tracking activities:" in result
+        assert "Design" in result
+        assert "Development" in result
+        assert "Debugging" in result
+        assert "Investigation" in result
+        assert "Discussion" in result
+        assert "Testing" in result
+        assert "Maintenance" in result
+        assert "Documentation" in result
+        assert "Teaching" in result
+        assert "Translation" in result
+        assert "Other" in result
+        assert "yes" in result  # Check default marker
+        assert "no" in result
     
     @patch('redmine_mcp.server.get_client')
     def test_get_time_entry_activities_empty(self, mock_get_client):
-        """測試時間追蹤活動列表為空"""
+        """Test time entry activity list is empty"""
         mock_client = Mock()
         mock_client.get_time_entry_activities.return_value = []
         mock_get_client.return_value = mock_client
         
         result = get_time_entry_activities()
         
-        assert "沒有找到時間追蹤活動" in result
+        assert "No time tracking activity found" in result
     
     @patch('redmine_mcp.server.get_client')
     def test_get_document_categories_success(self, mock_get_client):
-        """測試取得文件分類列表成功"""
+        """Test getting document category list successfully"""
         mock_client = Mock()
         mock_categories = [
             {
                 'id': 1,
-                'name': '使用手冊',
+                'name': 'User Manual',
                 'is_default': True
             },
             {
                 'id': 2,
-                'name': '技術文件',
+                'name': 'Technical Documentation',
                 'is_default': False
             },
             {
                 'id': 3,
-                'name': '申請表單',
+                'name': 'Application Form',
                 'is_default': False
             },
             {
                 'id': 4,
-                'name': '需求文件',
+                'name': 'Requirements Document',
                 'is_default': False
             }
         ]
@@ -394,121 +403,121 @@ class TestMCPTools:
         
         result = get_document_categories()
         
-        assert "可用的文件分類" in result
-        assert "使用手冊" in result
-        assert "技術文件" in result
-        assert "申請表單" in result
-        assert "需求文件" in result
-        assert "是" in result  # 檢查預設標記
-        assert "否" in result
+        assert "Available file categories:" in result
+        assert "User Manual" in result
+        assert "Technical Documentation" in result
+        assert "Application Form" in result
+        assert "Requirements Document" in result
+        assert "yes" in result  # Check default marker
+        assert "no" in result
     
     @patch('redmine_mcp.server.get_client')
     def test_get_document_categories_empty(self, mock_get_client):
-        """測試文件分類列表為空"""
+        """Test document category list is empty"""
         mock_client = Mock()
         mock_client.get_document_categories.return_value = []
         mock_get_client.return_value = mock_client
         
         result = get_document_categories()
         
-        assert "沒有找到文件分類" in result
+        assert "No file category found" in result
     
     @patch('redmine_mcp.server.get_client')
     def test_update_issue_status_success(self, mock_get_client):
-        """測試更新議題狀態成功"""
+        """Test updating issue status successfully"""
         mock_client = Mock()
         mock_client.update_issue.return_value = True
         
-        # 模擬更新後的議題
+        # Simulate updated issue
         updated_issue = RedmineIssue(
             id=123,
-            subject='測試議題',
-            description='描述',
-            status={'name': '進行中'},
-            priority={'name': '正常'},
-            project={'name': '測試專案', 'id': 1},
+            subject='Test Issue',
+            description='Description',
+            status={'name': 'In Progress'},
+            priority={'name': 'Normal'},
+            project={'name': 'Test Project', 'id': 1},
             tracker={'name': 'Bug'},
-            author={'name': '測試用戶'}
+            author={'name': 'Test User'}
         )
         mock_client.get_issue.return_value = updated_issue
         mock_get_client.return_value = mock_client
         
-        result = update_issue_status(123, 2, "狀態更新備註")
+        result = update_issue_status(123, 2, notes="Status update note")
         
-        assert "議題狀態更新成功" in result
-        assert "議題: #123 - 測試議題" in result
-        assert "新狀態: 進行中" in result
-        assert "備註: 狀態更新備註" in result
+        assert "Issue status updated successfully!" in result
+        assert "Issue: #123 - Test Issue" in result
+        assert "New status: In Progress" in result
+        assert "Remarks: Status update note" in result
         
-        # 驗證呼叫參數
-        mock_client.update_issue.assert_called_once_with(123, status_id=2, notes="狀態更新備註")
+        # Validate call arguments
+        mock_client.update_issue.assert_called_once_with(123, status_id=2, notes="Status update note")
     
     @patch('redmine_mcp.server.get_client')
     def test_update_issue_status_without_notes(self, mock_get_client):
-        """測試更新議題狀態不含備註"""
+        """Test updating issue status without notes"""
         mock_client = Mock()
         mock_client.update_issue.return_value = True
         
         updated_issue = RedmineIssue(
             id=123,
-            subject='測試議題',
-            description='描述',
-            status={'name': '已解決'},
-            priority={'name': '正常'},
-            project={'name': '測試專案', 'id': 1},
+            subject='Test Issue',
+            description='Description',
+            status={'name': 'Resolved'},
+            priority={'name': 'Normal'},
+            project={'name': 'Test Project', 'id': 1},
             tracker={'name': 'Bug'},
-            author={'name': '測試用戶'}
+            author={'name': 'Test User'}
         )
         mock_client.get_issue.return_value = updated_issue
         mock_get_client.return_value = mock_client
         
         result = update_issue_status(123, 3)
         
-        assert "議題狀態更新成功" in result
-        assert "新狀態: 已解決" in result
-        assert "備註:" not in result
+        assert "Issue status updated successfully!" in result
+        assert "New status: Resolved" in result
+        assert "Remarks:" not in result
         
-        # 驗證呼叫參數（沒有 notes）
+        # Validate call arguments (no notes)
         mock_client.update_issue.assert_called_once_with(123, status_id=3)
     
     @patch('redmine_mcp.server.get_client')
     def test_list_project_issues_success(self, mock_get_client):
-        """測試列出專案議題成功"""
+        """Test listing project issues successfully"""
         mock_client = Mock()
         
-        # 模擬專案資訊
+        # Simulate project information
         mock_project = RedmineProject(
             id=1,
-            name='測試專案',
+            name='Test Project',
             identifier='test-project',
-            description='專案描述',
+            description='Project description',
             status=1
         )
         mock_client.get_project.return_value = mock_project
         
-        # 模擬議題列表
+        # Simulate issue list
         mock_issues = [
             RedmineIssue(
                 id=101,
-                subject='第一個議題',
-                description='描述1',
-                status={'name': '新建'},
-                priority={'name': '正常'},
-                project={'name': '測試專案', 'id': 1},
+                subject='First Issue',
+                description='Description 1',
+                status={'name': 'New'},
+                priority={'name': 'Normal'},
+                project={'name': 'Test Project', 'id': 1},
                 tracker={'name': 'Bug'},
-                author={'name': '用戶1'},
-                assigned_to={'name': '指派用戶1'},
+                author={'name': 'User1'},
+                assigned_to={'name': 'Assigned User1'},
                 updated_on='2024-01-01'
             ),
             RedmineIssue(
                 id=102,
-                subject='第二個議題',
-                description='描述2',
-                status={'name': '進行中'},
-                priority={'name': '高'},
-                project={'name': '測試專案', 'id': 1},
+                subject='Second Issue',
+                description='Description 2',
+                status={'name': 'In Progress'},
+                priority={'name': 'High'},
+                project={'name': 'Test Project', 'id': 1},
                 tracker={'name': 'Feature'},
-                author={'name': '用戶2'},
+                author={'name': 'User2'},
                 assigned_to=None,
                 updated_on='2024-01-02'
             )
@@ -518,41 +527,41 @@ class TestMCPTools:
         
         result = list_project_issues(1, "open", 20)
         
-        assert "專案: 測試專案" in result
-        assert "狀態篩選: open" in result
-        assert "找到 2 個議題" in result
+        assert "Project: Test Project" in result
+        assert "Status filter: open" in result
+        assert "Found 2 issues:" in result
         assert "101" in result
-        assert "第一個議題" in result
+        assert "First Issue" in result
         assert "102" in result
-        assert "第二個議題" in result
-        assert "指派用戶1" in result
-        assert "未指派" in result
+        assert "Second Issue" in result
+        assert "Assigned User" in result
+        assert "Not assigned" in result
     
     @patch('redmine_mcp.server.get_client')
     def test_list_project_issues_empty(self, mock_get_client):
-        """測試列出專案議題為空"""
+        """Test listing project issues is empty"""
         mock_client = Mock()
         mock_client.list_issues.return_value = []
         mock_get_client.return_value = mock_client
         
         result = list_project_issues(1, "all", 10)
         
-        assert "專案 1 中沒有找到符合條件的議題" in result
+        assert "project 1 No matching issues were found in" in result
     
     @patch('redmine_mcp.server.get_client')
     def test_list_project_issues_with_different_filters(self, mock_get_client):
-        """測試不同狀態篩選的專案議題列表"""
+        """Test project issue list with different status filters"""
         mock_client = Mock()
         mock_client.list_issues.return_value = []
         mock_get_client.return_value = mock_client
         
-        # 測試 closed 篩選
+        # Test closed filter
         result = list_project_issues(1, "closed", 10)
         mock_client.list_issues.assert_called_with(
-            project_id=1, limit=10, sort='updated_on:desc', status_id='closed'
+            project_id=1, limit=10, sort='updated_on:desc', status_id='c'
         )
         
-        # 測試 all 篩選
+        # Test all filter
         result = list_project_issues(1, "all", 10)
         mock_client.list_issues.assert_called_with(
             project_id=1, limit=10, sort='updated_on:desc'
@@ -560,67 +569,67 @@ class TestMCPTools:
     
     @patch('redmine_mcp.server.get_client')
     def test_list_project_issues_limit_bounds(self, mock_get_client):
-        """測試專案議題列表的限制邊界"""
+        """Test project issue list limit bounds"""
         mock_client = Mock()
         mock_client.list_issues.return_value = []
         mock_get_client.return_value = mock_client
         
-        # 測試超過最大限制
+        # Test exceeding max limit
         list_project_issues(1, "open", 150)
         args = mock_client.list_issues.call_args[1]
-        assert args['limit'] == 100  # 應該被限制到 100
+        assert args['limit'] == 100  # Should be limited to 100
         
-        # 測試低於最小限制
+        # Test below min limit
         list_project_issues(1, "open", -5)
         args = mock_client.list_issues.call_args[1]
-        assert args['limit'] == 1  # 應該被設為 1
+        assert args['limit'] == 1  # Should be set to 1
     
     @patch('redmine_mcp.server.get_client')
     def test_update_issue_content_with_tracker(self, mock_get_client):
-        """測試更新議題內容包含追蹤器"""
+        """Test updating issue content with tracker"""
         mock_client = Mock()
         mock_client.update_issue.return_value = True
         
         updated_issue = RedmineIssue(
             id=123,
-            subject='更新的標題',
-            description='更新的描述',
-            status={'name': '新建立'},
-            priority={'name': '正常'},
-            project={'name': '測試專案', 'id': 1},
-            tracker={'name': '功能'},
-            author={'name': '測試用戶'},
+            subject='Updated Title',
+            description='Updated Description',
+            status={'name': 'Newly Created'},
+            priority={'name': 'Normal'},
+            project={'name': 'Test Project', 'id': 1},
+            tracker={'name': 'Feature'},
+            author={'name': 'Test User'},
             done_ratio=50
         )
         mock_client.get_issue.return_value = updated_issue
         mock_get_client.return_value = mock_client
         
-        result = update_issue_content(123, subject='更新的標題', tracker_id=2, done_ratio=50)
+        result = update_issue_content(123, subject='Updated Title', tracker_id=2, done_ratio=50)
         
-        assert "議題內容更新成功" in result
-        assert "更新的標題" in result
-        assert "追蹤器 ID: 2" in result
-        assert "完成度: 50%" in result
-        assert "追蹤器: 功能" in result
+        assert "Issue content updated successfully!" in result
+        assert "Updated Title" in result
+        assert "Tracker ID: 2" in result
+        assert "Done ratio: 50%" in result
+        assert "Tracker: Feature" in result
         
-        # 驗證呼叫參數
-        mock_client.update_issue.assert_called_once_with(123, subject='更新的標題', tracker_id=2, done_ratio=50)
+        # Validate call arguments
+        mock_client.update_issue.assert_called_once_with(123, subject='Updated Title', tracker_id=2, done_ratio=50)
     
     @patch('redmine_mcp.server.get_client')
     def test_update_issue_content_tracker_only(self, mock_get_client):
-        """測試只更新追蹤器"""
+        """Test updating only tracker"""
         mock_client = Mock()
         mock_client.update_issue.return_value = True
         
         updated_issue = RedmineIssue(
             id=123,
-            subject='測試議題',
-            description='描述',
-            status={'name': '新建立'},
-            priority={'name': '正常'},
-            project={'name': '測試專案', 'id': 1},
-            tracker={'name': '功能'},
-            author={'name': '測試用戶'},
+            subject='Test Issue',
+            description='Description',
+            status={'name': 'Newly Created'},
+            priority={'name': 'Normal'},
+            project={'name': 'Test Project', 'id': 1},
+            tracker={'name': 'Feature'},
+            author={'name': 'Test User'},
             done_ratio=0
         )
         mock_client.get_issue.return_value = updated_issue
@@ -628,28 +637,28 @@ class TestMCPTools:
         
         result = update_issue_content(123, tracker_id=2)
         
-        assert "議題內容更新成功" in result
-        assert "追蹤器 ID: 2" in result
-        assert "追蹤器: 功能" in result
+        assert "Issue content updated successfully!" in result
+        assert "Tracker ID: 2" in result
+        assert "Tracker: Feature" in result
         
-        # 驗證呼叫參數
+        # Validate call arguments
         mock_client.update_issue.assert_called_once_with(123, tracker_id=2)
     
     @patch('redmine_mcp.server.get_client')
     def test_update_issue_content_with_dates_and_hours(self, mock_get_client):
-        """測試更新議題日期和工時"""
+        """Test updating issue dates and hours"""
         mock_client = Mock()
         mock_client.update_issue.return_value = True
         
         updated_issue = RedmineIssue(
             id=123,
-            subject='測試議題',
-            description='描述',
-            status={'name': '新建立'},
-            priority={'name': '正常'},
-            project={'name': '測試專案', 'id': 1},
-            tracker={'name': '功能'},
-            author={'name': '測試用戶'},
+            subject='Test Issue',
+            description='Description',
+            status={'name': 'Newly Created'},
+            priority={'name': 'Normal'},
+            project={'name': 'Test Project', 'id': 1},
+            tracker={'name': 'Feature'},
+            author={'name': 'Test User'},
             done_ratio=0
         )
         mock_client.get_issue.return_value = updated_issue
@@ -662,12 +671,12 @@ class TestMCPTools:
             estimated_hours=8.5
         )
         
-        assert "議題內容更新成功" in result
-        assert "開始日期: 2025-06-26" in result
-        assert "完成日期: 2025-06-30" in result
-        assert "預估工時: 8.5 小時" in result
+        assert "Issue content updated successfully!" in result
+        assert "start date: 2025-06-26" in result
+        assert "Completion date: 2025-06-30" in result
+        assert "Estimated hours: 8.5" in result
         
-        # 驗證呼叫參數
+        # Validate call arguments
         mock_client.update_issue.assert_called_once_with(
             123, 
             start_date='2025-06-26',
@@ -677,42 +686,42 @@ class TestMCPTools:
     
     @patch('redmine_mcp.server.get_client')
     def test_update_issue_content_invalid_date_format(self, mock_get_client):
-        """測試無效日期格式"""
+        """Test invalid date format"""
         mock_client = Mock()
         mock_get_client.return_value = mock_client
         
-        # 測試無效開始日期
+        # Test invalid start date
         result = update_issue_content(123, start_date='2025/06/26')
-        assert "錯誤: 開始日期格式必須為 YYYY-MM-DD" in result
+        assert "Error: Start date format must be YYYY-MM-DD" in result
         
-        # 測試無效完成日期
+        # Test invalid due date
         result = update_issue_content(123, due_date='26-06-2025')
-        assert "錯誤: 完成日期格式必須為 YYYY-MM-DD" in result
+        assert "Error: Completion date format must be YYYY-MM-DD" in result
     
     @patch('redmine_mcp.server.get_client')
     def test_update_issue_content_invalid_hours(self, mock_get_client):
-        """測試無效工時"""
+        """Test invalid hours"""
         mock_client = Mock()
         mock_get_client.return_value = mock_client
         
         result = update_issue_content(123, estimated_hours=-5.0)
-        assert "錯誤: 預估工時不能為負數" in result
+        assert "Error: Estimated hours cannot be negative" in result
     
     @patch('redmine_mcp.server.get_client')
     def test_update_issue_content_with_parent_issue(self, mock_get_client):
-        """測試設定父議題"""
+        """Test setting parent issue"""
         mock_client = Mock()
         mock_client.update_issue.return_value = True
         
         updated_issue = RedmineIssue(
             id=123,
-            subject='測試子議題',
-            description='描述',
-            status={'name': '新建立'},
-            priority={'name': '正常'},
-            project={'name': '測試專案', 'id': 1},
-            tracker={'name': '功能'},
-            author={'name': '測試用戶'},
+            subject='Test Child Issue',
+            description='Description',
+            status={'name': 'Newly Created'},
+            priority={'name': 'Normal'},
+            project={'name': 'Test Project', 'id': 1},
+            tracker={'name': 'Feature'},
+            author={'name': 'Test User'},
             done_ratio=0
         )
         mock_client.get_issue.return_value = updated_issue
@@ -720,8 +729,8 @@ class TestMCPTools:
         
         result = update_issue_content(123, parent_issue_id=100)
         
-        assert "議題內容更新成功" in result
-        assert "父議題 ID: 100" in result
+        assert "Issue content updated successfully!" in result
+        assert "Parent issue ID: 100" in result
         
-        # 驗證呼叫參數
+        # Validate call arguments
         mock_client.update_issue.assert_called_once_with(123, parent_issue_id=100)

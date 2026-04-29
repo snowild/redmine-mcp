@@ -1,6 +1,6 @@
 """
-Redmine MCP 服務器主程式
-提供與 Redmine 系統整合的 MCP 工具
+Redmine MCP server main program
+Provide MCP tools integrated with Redmine system
 """
 
 import os
@@ -8,8 +8,8 @@ import argparse
 from typing import Any
 from datetime import datetime
 
-# 確保配置在 FastMCP 初始化之前載入
-# 這會處理所有環境變數設定，包含 FASTMCP_LOG_LEVEL
+# Ensure configuration is loaded before FastMCP initialization
+# This will handle all environment variable settings, including FASTMCP_LOG_LEVEL
 from .config import get_config
 config = get_config()
 
@@ -17,46 +17,46 @@ from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.utilities.types import Image
 from .redmine_client import get_client, RedmineAPIError
 
-# 建立 FastMCP 服務器實例
+# Create FastMCP server instance
 mcp = FastMCP("Redmine MCP")
 
 
 @mcp.tool()
 def server_info() -> str:
-    """取得服務器資訊和狀態"""
+    """Get server information and status"""
     config = get_config()
-    return f"""Redmine MCP 服務器已啟動
-- Redmine 網域: {config.redmine_domain}
-- 除錯模式: {config.debug_mode}
-- API 逾時: {config.redmine_timeout}秒"""
+    return f"""Redmine MCP server started
+- Redmine domain: {config.redmine_domain}
+- Debug mode: {config.debug_mode}
+- API timeout: {config.redmine_timeout}Second"""
 
 
 @mcp.tool()
 def health_check() -> str:
-    """健康檢查工具，確認服務器正常運作"""
+    """Health check tool to confirm that the server is functioning properly"""
     try:
         config = get_config()
         client = get_client()
-        # 測試連線
+        # Test connection
         if client.test_connection():
-            return f"✓ 服務器正常運作，已連接到 {config.redmine_domain}"
+            return f"✓ The server is functioning normally and connected to {config.redmine_domain}"
         else:
-            return f"✗ 無法連接到 Redmine 服務器: {config.redmine_domain}"
+            return f"✗ Unable to connect to Redmine server: {config.redmine_domain}"
     except Exception as e:
-        return f"✗ 服務器異常: {str(e)}"
+        return f"✗ Server exception: {str(e)}"
 
 
 @mcp.tool()
 def get_issue(issue_id: int, include_details: bool = True) -> str:
     """
-    取得指定的 Redmine 議題詳細資訊
+    Get specific Redmine issue details
     
     Args:
-        issue_id: 議題 ID
-        include_details: 是否包含詳細資訊（描述、備註、附件等）
+        issue_id: Issue ID
+        include_details: whether to include detailed information (description, notes, attachments, etc.)
     
     Returns:
-        議題的詳細資訊，以易讀格式呈現
+        Detailed information about the issue, presented in an easy-to-read format
     """
     try:
         client = get_client()
@@ -64,15 +64,15 @@ def get_issue(issue_id: int, include_details: bool = True) -> str:
         if include_details:
             include_params = ['attachments', 'changesets', 'children', 'journals', 'relations', 'watchers']
         
-        # 使用新的 get_issue_raw 方法取得完整資料
+        # Use the new get_issue_raw method to get complete information
         issue_data = client.get_issue_raw(issue_id, include=include_params)
         
-        # Emoji 對應表
-        tracker_emojis = {'Bug': '🐛', '缺陷': '🐛', '功能': '✨', 'Feature': '✨', '重構': '🔧', 'Refactor': '🔧', '文件': '📝', 'Documentation': '📝'}
-        priority_emojis = {'低': '🟢', '正常': '🟡', '高': '🟠', '緊急': '🔴', '即時': '🔴'}
-        status_emojis = {'新建立': '📝', '實作中': '🟡', '已回應': '🟡', '已解決': '🟢', '待審核': '🟢', '已結束': '⚫', '已拒絕': '⚫'}
+        # Emoji correspondence table
+        tracker_emojis = {'Bug': '🐛', 'defect': '🐛', 'Function': '✨', 'Feature': '✨', 'Refactor': '🔧', 'Refactor': '🔧', 'document': '📝', 'Documentation': '📝'}
+        priority_emojis = {'Low': '🟢', 'normal': '🟡', 'high': '🟠', 'urgent': '🔴', 'immediate': '🔴'}
+        status_emojis = {'Newly created': '📝', 'In practice': '🟡', 'responded': '🟡', 'Resolved': '🟢', 'Pending review': '🟢', 'ended': '⚫', 'Rejected': '⚫'}
 
-        # 格式化基本資訊
+        # Format basic information
         tracker_name = issue_data['tracker'].get('name', 'N/A')
         tracker_emoji = tracker_emojis.get(tracker_name, '📋')
         status_name = issue_data['status'].get('name', 'N/A')
@@ -81,229 +81,229 @@ def get_issue(issue_id: int, include_details: bool = True) -> str:
         priority_emoji = priority_emojis.get(priority_name, '🟡')
 
         assigned_name = issue_data.get('assigned_to', {}).get('name') if issue_data.get('assigned_to') else None
-        assigned_to = f"@{assigned_name}" if assigned_name else '未指派'
-        category_info = issue_data.get('category', {}).get('name', '未分類') if issue_data.get('category') else '未分類'
+        assigned_to = f"@{assigned_name}" if assigned_name else 'Not assigned'
+        category_info = issue_data.get('category', {}).get('name', 'Uncategorized') if issue_data.get('category') else 'Uncategorized'
         estimated = issue_data.get('estimated_hours')
-        estimated_text = f"{estimated} 小時" if estimated is not None else '未設定'
+        estimated_text = f"{estimated} hours" if estimated is not None else 'Not set'
         spent = issue_data.get('total_spent_hours') or issue_data.get('spent_hours')
-        spent_text = f"{spent} 小時" if spent is not None else '未記錄'
+        spent_text = f"{spent} hours" if spent is not None else 'Not recorded'
 
-        # 提取特定自訂欄位
+        # Extract specific custom fields
         custom_fields = issue_data.get('custom_fields', [])
         cf_map = {cf.get('id'): cf.get('value', '') for cf in custom_fields}
-        actual_end_date = cf_map.get(23, '未設定')
-        resolve_date = cf_map.get(64, '未設定')
+        actual_end_date = cf_map.get(23, 'Not set')
+        resolve_date = cf_map.get(64, 'Not set')
 
-        result = f"""# 議題 #{issue_data['id']}: {issue_data['subject']}
+        result = f"""Issue #{issue_data['id']}: {issue_data['subject']}
 
-| 項目 | 內容 |
+| Field | Value |
 |------|------|
-| **Redmine No.** | #{issue_data['id']} |
-| **問題名稱** | {issue_data['subject']} |
-| **專案** | {issue_data['project'].get('name', 'N/A')} (ID: {issue_data['project'].get('id', 'N/A')}) |
-| **問題種類** | `{tracker_emoji} {tracker_name}` |
-| **狀態** | `{status_emoji} {status_name}` |
-| **優先級** | `{priority_emoji} {priority_name}` |
-| **分類** | {category_info} |
-| **建立者** | {issue_data['author'].get('name', 'N/A')} |
-| **處理者** | {assigned_to} |
-| **完成百分比** | {issue_data.get('done_ratio', 0)}% |
-| **建立時間** | {issue_data.get('created_on', 'N/A')} |
-| **開始時間** | {issue_data.get('start_date', '未設定')} |
-| **結束時間** | {issue_data.get('due_date', '未設定')} |
-| **預估工時** | {estimated_text} |
-| **實際工時** | {spent_text} |
-| **實際結束日期** | {actual_end_date or '未設定'} |
-| **解決日期** | {resolve_date or '未設定'} |
-| **更新時間** | {issue_data.get('updated_on', 'N/A')} |"""
+| **Issue ID** | #{issue_data['id']} |
+| **Subject** | {issue_data['subject']} |
+| **Project** | {issue_data['project'].get('name', 'N/A')} (ID: {issue_data['project'].get('id', 'N/A')}) |
+| **Tracker** | `{tracker_emoji} {tracker_name}` |
+| **Status** | `{status_emoji} {status_name}` |
+| **Priority** | `{priority_emoji} {priority_name}` |
+| **Category** | {category_info} |
+| **Author** | {issue_data['author'].get('name', 'N/A')} |
+| **Assigned to** | {assigned_to} |
+| **Done ratio** | {issue_data.get('done_ratio', 0)}% |
+| **Created on** | {issue_data.get('created_on', 'N/A')} |
+| **Start date** | {issue_data.get('start_date', 'Not set')} |
+| **Due date** | {issue_data.get('due_date', 'Not set')} |
+| **Estimated hours** | {estimated_text} |
+| **Spent hours** | {spent_text} |
+| **Actual end date** | {actual_end_date or 'Not set'} |
+| **Resolution date** | {resolve_date or 'Not set'} |
+| **Updated** | {issue_data.get('updated_on', 'N/A')} |"""
 
-        # 父議題
+        # Parent issue
         if 'parent' in issue_data and issue_data['parent']:
             parent = issue_data['parent']
-            result += f"\n| **父議題** | #{parent['id']} - {parent.get('subject', 'N/A')} |"
+            result += f"\n| **Parent Issue** | #{parent['id']} - {parent.get('subject', 'N/A')} |"
 
-        # 子議題
+        # Children
         if include_details and 'children' in issue_data and issue_data['children']:
             children_text = ", ".join([f"#{c.get('id')}" for c in issue_data['children']])
-            result += f"\n| **子議題** | {children_text} |"
+            result += f"\n| **Sub-topic** | {children_text} |"
 
-        # 自訂欄位（排除已獨立顯示的 id=23, 64）
+        # Custom fields (excluding id=23, 64 that have been displayed independently)
         other_cf = [cf for cf in custom_fields if cf.get('id') not in (23, 64) and cf.get('value', '')]
         if other_cf:
             for cf in other_cf:
                 cf_name = cf.get('name', f"ID:{cf.get('id')}")
                 result += f"\n| **{cf_name}** (ID:{cf.get('id')}) | {cf.get('value', '')} |"
 
-        # 描述
+        # describe
         description = issue_data.get('description', '').strip()
-        result += f"\n\n## 描述\n\n{description if description else '（無描述）'}"
+        result += f"\n\n## Description\n\n{description if description else '(no description)'}"
 
-        # 附件
+        # appendix
         if include_details and 'attachments' in issue_data and issue_data['attachments']:
-            result += f"\n\n## 附件（{len(issue_data['attachments'])} 個）\n"
-            result += "\n| 檔名 | 大小 | 類型 | 上傳者 | ID |"
+            result += f"\n\n## Attachment ({len(issue_data['attachments'])} )\n"
+            result += "\n| File name | Size | Type | Uploader | ID |"
             result += "\n|------|------|------|--------|-----|"
             for att in issue_data['attachments']:
                 file_size = att.get('filesize', 0)
                 size_text = f"{file_size / (1024 * 1024):.2f} MB" if file_size >= 1024 * 1024 else f"{file_size / 1024:.1f} KB"
                 result += f"\n| {att.get('filename', 'N/A')} | {size_text} | {att.get('content_type', 'N/A')} | {att.get('author', {}).get('name', 'N/A')} | {att.get('id', '')} |"
 
-        # 備註/歷史記錄
+        # Notes/History
         if include_details and 'journals' in issue_data and issue_data['journals']:
             notes_journals = [j for j in issue_data['journals'] if j.get('notes', '').strip()]
             if notes_journals:
-                result += f"\n\n## 備註記錄（{len(notes_journals)} 筆）\n"
+                result += f"\n\n## Remarks record ({len(notes_journals)} Pen)\n"
                 for i, journal in enumerate(notes_journals, 1):
                     author_name = journal.get('user', {}).get('name', 'N/A')
                     created_on = journal.get('created_on', 'N/A')
                     notes = journal.get('notes', '').strip()
                     result += f"\n### #{i} - {author_name}（{created_on}）\n\n{notes}\n"
 
-        # 子議題詳情
+        # Sub-topic details
         if include_details and 'children' in issue_data and issue_data['children']:
-            result += f"\n\n## 子議題（{len(issue_data['children'])} 個）\n"
-            result += "\n| ID | 種類 | 標題 | 狀態 |"
+            result += f"\n\n## Sub-topic ({len(issue_data['children'])} )\n"
+            result += "\n| ID | Category | Title | Status |"
             result += "\n|----|------|------|------|"
             for child in issue_data['children']:
                 child_tracker = child.get('tracker', {}).get('name', '')
                 child_status = child.get('status', {}).get('name', 'N/A') if child.get('status') else 'N/A'
                 result += f"\n| #{child.get('id')} | {child_tracker} | {child.get('subject', 'N/A')} | {child_status} |"
 
-        # 關聯議題
+        # Related issues
         if include_details and 'relations' in issue_data and issue_data['relations']:
-            result += f"\n\n## 關聯議題（{len(issue_data['relations'])} 個）\n"
-            result += "\n| 議題 | 關聯類型 |"
+            result += f"\n\n## Related issues ({len(issue_data['relations'])} )\n"
+            result += "\n| Issue | Association Type |"
             result += "\n|------|----------|"
             for rel in issue_data['relations']:
                 rel_type = rel.get('relation_type', 'relates')
                 other_id = rel.get('issue_to_id') if rel.get('issue_id') == issue_data['id'] else rel.get('issue_id')
                 result += f"\n| #{other_id} | {rel_type} |"
 
-        # 觀察者
+        # observer
         if include_details and 'watchers' in issue_data and issue_data['watchers']:
             watcher_names = [w.get('name', f"ID:{w.get('id')}") for w in issue_data['watchers']]
-            result += f"\n\n## 觀察者（{len(watcher_names)} 人）\n\n{', '.join(watcher_names)}"
+            result += f"\n\n## Observer ({len(watcher_names)} People)\n\n{', '.join(watcher_names)}"
 
         return result
         
     except RedmineAPIError as e:
-        return f"取得議題失敗: {str(e)}"
+        return f"Failed to get issue: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
 def update_issue_status(issue_id: int, status_id: int = None, status_name: str = None, notes: str = "") -> str:
     """
-    更新議題狀態
+    Update issue status
     
     Args:
-        issue_id: 議題 ID
-        status_id: 新的狀態 ID（與 status_name 二選一）
-        status_name: 新的狀態名稱（與 status_id 二選一）
-        notes: 更新備註（可選）
+        issue_id: Issue ID
+        status_id: new status ID (optional with status_name)
+        status_name: new status name (choose one from status_id)
+        notes: update notes (optional)
     
     Returns:
-        更新結果訊息
+        Update result message
     """
     try:
         client = get_client()
         
-        # 處理狀態參數
+        # Processing status parameters
         final_status_id = status_id
         if status_name:
             final_status_id = client.find_status_id_by_name(status_name)
             if not final_status_id:
-                return f"找不到狀態名稱：「{status_name}」\n\n可用狀態：\n" + "\n".join([f"- {name}" for name in client.get_available_statuses().keys()])
+                return f'Status name not found: "{status_name}"\n\n Available status: \n' + "\n".join([f"- {name}" for name in client.get_available_statuses().keys()])
         
         if not final_status_id:
-            return "錯誤：必須提供 status_id 或 status_name 其中一個參數"
+            return "Error: One of the status_id or status_name parameters must be supplied"
         
-        # 準備更新資料
+        # Prepare to update information
         update_data = {'status_id': final_status_id}
         if notes.strip():
             update_data['notes'] = notes.strip()
         
-        # 執行更新
+        # perform update
         client.update_issue(issue_id, **update_data)
         
-        # 取得更新後的議題資訊確認
+        # Get confirmation of updated issue information
         updated_issue = client.get_issue(issue_id)
         
-        result = f"""議題狀態更新成功!
+        result = f"""Issue status updated successfully!
 
-議題: #{issue_id} - {updated_issue.subject}
-新狀態: {updated_issue.status.get('name', 'N/A')}"""
+Issue: #{issue_id} - {updated_issue.subject}
+New status: {updated_issue.status.get('name', 'N/A')}"""
 
         if notes.strip():
-            result += f"\n備註: {notes}"
+            result += f"\nRemarks: {notes}"
             
         return result
         
     except RedmineAPIError as e:
-        return f"更新議題狀態失敗: {str(e)}"
+        return f"Failed to update issue status: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
 def list_project_issues(project_id: int, status_filter: str = "open", limit: int = 20) -> str:
     """
-    列出專案的議題
+    List project topics
     
     Args:
-        project_id: 專案 ID
-        status_filter: 狀態篩選 ("open", "closed", "all")
-        limit: 最大回傳數量 (預設 20，最大 100)
+        project_id: Project ID
+        status_filter: status filter ("open", "closed", "all")
+        limit: maximum number of return requests (default 20, maximum 100)
     
     Returns:
-        專案議題列表，以表格格式呈現
+        List of project issues, presented in table format
     """
     try:
         client = get_client()
         
-        # 限制 limit 範圍
+        # limit limit range
         limit = min(max(limit, 1), 100)
         
-        # 根據狀態篩選設定參數
+        # Filter setting parameters based on status
         params = {
             'project_id': project_id,
             'limit': limit,
             'sort': 'updated_on:desc'
         }
         
-        # 處理狀態篩選
+        # Processing status filter
         if status_filter == "open":
-            params['status_id'] = 'o'  # Redmine API 使用 'o' 表示開放狀態
+            params['status_id'] = 'o'  # Redmine API uses 'o' to indicate open status
         elif status_filter == "closed":
-            params['status_id'] = 'c'  # Redmine API 使用 'c' 表示關閉狀態
-        # "all" 則不設定 status_id
+            params['status_id'] = 'c'  # Redmine API uses 'c' to indicate closed status
+        # "all" does not set status_id
         
-        # 取得議題列表
+        # Get a list of issues
         issues = client.list_issues(**params)
         
         if not issues:
-            return f"專案 {project_id} 中沒有找到符合條件的議題"
+            return f"project {project_id} No matching issues were found in"
         
-        # 取得專案資訊
+        # Get project information
         try:
             project = client.get_project(project_id)
             project_name = project.name
         except:
-            project_name = f"專案 {project_id}"
+            project_name = f"project {project_id}"
         
-        # 格式化議題列表
-        result = f"""專案: {project_name}
-狀態篩選: {status_filter}
-找到 {len(issues)} 個議題:
+        # Format issue list
+        result = f"""Project: {project_name}
+Status filter: {status_filter}
+Found {len(issues)} issues:
 
-{"ID":<8} {"標題":<40} {"狀態":<12} {"指派給":<15} {"更新時間":<10}
+{"ID":<8} {"Subject":<40} {"Status":<12} {"Assigned to":<15} {"Updated":<10}
 {"-"*8} {"-"*40} {"-"*12} {"-"*15} {"-"*10}"""
 
         for issue in issues:
             title = issue.subject[:37] + "..." if len(issue.subject) > 40 else issue.subject
             status = issue.status.get('name', 'N/A')[:10]
-            assignee = issue.assigned_to.get('name', '未指派')[:13] if issue.assigned_to else '未指派'
+            assignee = issue.assigned_to.get('name', 'Not assigned')[:13] if issue.assigned_to else 'Not assigned'
             updated = issue.updated_on[:10] if issue.updated_on else 'N/A'
             
             result += f"\n{issue.id:<8} {title:<40} {status:<12} {assignee:<15} {updated:<10}"
@@ -311,59 +311,59 @@ def list_project_issues(project_id: int, status_filter: str = "open", limit: int
         return result
         
     except RedmineAPIError as e:
-        return f"列出專案議題失敗: {str(e)}"
+        return f"Failed to list project issues: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
 def get_issue_statuses() -> str:
     """
-    取得所有可用的議題狀態列表
+    Get a list of all available issue statuses
     
     Returns:
-        格式化的狀態列表
+        Formatted status list
     """
     try:
         client = get_client()
         statuses = client.get_issue_statuses()
         
         if not statuses:
-            return "沒有找到議題狀態"
+            return "Issue status not found"
         
-        result = "可用的議題狀態:\n\n"
-        result += f"{'ID':<5} {'名稱':<15} {'已關閉':<8}\n"
+        result = "Available issue statuses:\n\n"
+        result += f"{'ID':<5} {'name':<15} {'Closed':<8}\n"
         result += f"{'-'*5} {'-'*15} {'-'*8}\n"
         
         for status in statuses:
-            is_closed = "是" if status.get('is_closed', False) else "否"
+            is_closed = "yes" if status.get('is_closed', False) else "no"
             result += f"{status['id']:<5} {status['name']:<15} {is_closed:<8}\n"
         
         return result
         
     except RedmineAPIError as e:
-        return f"取得議題狀態失敗: {str(e)}"
+        return f"Failed to get issue status: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
 def get_trackers() -> str:
     """
-    取得所有可用的追蹤器列表
+    Get a list of all available trackers
     
     Returns:
-        格式化的追蹤器列表
+        Formatted tracker list
     """
     try:
         client = get_client()
         trackers = client.get_trackers()
         
         if not trackers:
-            return "沒有找到追蹤器"
+            return "No tracker found"
         
-        result = "可用的追蹤器:\n\n"
-        result += f"{'ID':<5} {'名稱':<20} {'預設狀態':<12}\n"
+        result = "Available trackers:\n\n"
+        result += f"{'ID':<5} {'name':<20} {'Default state':<12}\n"
         result += f"{'-'*5} {'-'*20} {'-'*12}\n"
         
         for tracker in trackers:
@@ -373,126 +373,126 @@ def get_trackers() -> str:
         return result
         
     except RedmineAPIError as e:
-        return f"取得追蹤器列表失敗: {str(e)}"
+        return f"Failed to get tracker list: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
 def get_priorities() -> str:
     """
-    取得所有可用的議題優先級列表
+    Get a priority list of all available issues
     
     Returns:
-        格式化的優先級列表
+        Formatted priority list
     """
     try:
         client = get_client()
         priorities = client.get_priorities()
         
         if not priorities:
-            return "沒有找到議題優先級"
+            return "Issue priority not found"
         
-        result = "可用的議題優先級:\n\n"
-        result += f"{'ID':<5} {'名稱':<15} {'預設':<8}\n"
+        result = "Available issue priorities:\n\n"
+        result += f"{'ID':<5} {'name':<15} {'default':<8}\n"
         result += f"{'-'*5} {'-'*15} {'-'*8}\n"
         
         for priority in priorities:
-            is_default = "是" if priority.get('is_default', False) else "否"
+            is_default = "yes" if priority.get('is_default', False) else "no"
             result += f"{priority['id']:<5} {priority['name']:<15} {is_default:<8}\n"
         
         return result
         
     except RedmineAPIError as e:
-        return f"取得議題優先級失敗: {str(e)}"
+        return f"Failed to obtain issue priority: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
 def get_time_entry_activities() -> str:
     """
-    取得所有可用的時間追蹤活動列表
+    Get a list of all available time tracking activities
     
     Returns:
-        格式化的時間追蹤活動列表
+        Formatted time tracking activity list
     """
     try:
         client = get_client()
         activities = client.get_time_entry_activities()
         
         if not activities:
-            return "沒有找到時間追蹤活動"
+            return "No time tracking activity found"
         
-        result = "可用的時間追蹤活動:\n\n"
-        result += f"{'ID':<5} {'名稱':<20} {'預設':<8}\n"
+        result = "Available time tracking activities:\n\n"
+        result += f"{'ID':<5} {'name':<20} {'default':<8}\n"
         result += f"{'-'*5} {'-'*20} {'-'*8}\n"
         
         for activity in activities:
-            is_default = "是" if activity.get('is_default', False) else "否"
+            is_default = "yes" if activity.get('is_default', False) else "no"
             result += f"{activity['id']:<5} {activity['name']:<20} {is_default:<8}\n"
         
         return result
         
     except RedmineAPIError as e:
-        return f"取得時間追蹤活動失敗: {str(e)}"
+        return f"Failed to get time tracking activity: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
 def get_document_categories() -> str:
     """
-    取得所有可用的文件分類列表
+    Get a list of all available file categories
     
     Returns:
-        格式化的文件分類列表
+        Formatted file classification list
     """
     try:
         client = get_client()
         categories = client.get_document_categories()
         
         if not categories:
-            return "沒有找到文件分類"
+            return "No file category found"
         
-        result = "可用的文件分類:\n\n"
-        result += f"{'ID':<5} {'名稱':<25} {'預設':<8}\n"
+        result = "Available file categories:\n\n"
+        result += f"{'ID':<5} {'name':<25} {'default':<8}\n"
         result += f"{'-'*5} {'-'*25} {'-'*8}\n"
         
         for category in categories:
-            is_default = "是" if category.get('is_default', False) else "否"
+            is_default = "yes" if category.get('is_default', False) else "no"
             result += f"{category['id']:<5} {category['name']:<25} {is_default:<8}\n"
         
         return result
         
     except RedmineAPIError as e:
-        return f"取得文件分類失敗: {str(e)}"
+        return f"Failed to get file classification: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
 def get_issue_categories(project_id: int) -> str:
     """
-    取得指定專案的議題分類列表
+    Obtain the issue classification list of the specified project
 
-    議題分類是專案層級的設定，每個專案可有不同的分類。
+    Topic classification is a project-level setting, and each project can have a different classification.
 
     Args:
-        project_id: 專案 ID
+        project_id: Project ID
 
     Returns:
-        格式化的議題分類列表
+        Formatted issue category list
     """
     try:
         client = get_client()
         categories = client.get_issue_categories(project_id)
 
         if not categories:
-            return f"專案 #{project_id} 沒有設定議題分類"
+            return f"project #{project_id} No topic classification is set"
 
-        result = f"專案 #{project_id} 的議題分類:\n\n"
-        result += f"{'ID':<5} {'名稱':<25}\n"
+        result = f"project #{project_id} Topic classification:\n\n"
+        result += f"{'ID':<5} {'name':<25}\n"
         result += f"{'-'*5} {'-'*25}\n"
 
         for category in categories:
@@ -501,76 +501,76 @@ def get_issue_categories(project_id: int) -> str:
         return result
 
     except RedmineAPIError as e:
-        return f"取得議題分類失敗: {str(e)}"
+        return f"Failed to obtain issue classification: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
 def get_projects() -> str:
     """
-    取得可存取的專案列表
+    Get a list of accessible projects
     
     Returns:
-        格式化的專案列表
+        Formatted project list
     """
     try:
         client = get_client()
         projects = client.list_projects(limit=50)
         
         if not projects:
-            return "沒有找到可存取的專案"
+            return "No accessible project found"
         
-        result = f"找到 {len(projects)} 個專案:\n\n"
-        result += f"{'ID':<5} {'識別碼':<20} {'名稱':<30} {'狀態':<8}\n"
+        result = f"Found {len(projects)} projects:\n\n"
+        result += f"{'ID':<5} {'Identification code':<20} {'name':<30} {'state':<8}\n"
         result += f"{'-'*5} {'-'*20} {'-'*30} {'-'*8}\n"
         
         for project in projects:
-            status_text = "正常" if project.status == 1 else "封存"
+            status_text = "normal" if project.status == 1 else "Seal"
             name = project.name[:27] + "..." if len(project.name) > 30 else project.name
             result += f"{project.id:<5} {project.identifier:<20} {name:<30} {status_text:<8}\n"
         
         return result
         
     except RedmineAPIError as e:
-        return f"取得專案列表失敗: {str(e)}"
+        return f"Failed to get project list: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
 def search_issues(query: str, project_id: int = None, limit: int = 10) -> str:
     """
-    搜尋議題 (在標題或描述中搜尋關鍵字)
+    Search for issues (search keywords in title or description)
     
     Args:
-        query: 搜尋關鍵字
-        project_id: 限制在特定專案中搜尋 (可選)
-        limit: 最大回傳數量 (預設 10，最大 50)
+        query: search keyword
+        project_id: restrict search to specific projects (optional)
+        limit: maximum number of return requests (default 10, maximum 50)
     
     Returns:
-        符合搜尋條件的議題列表
+        List of issues matching search criteria
     """
     try:
         if not query.strip():
-            return "請提供搜尋關鍵字"
+            return "Please provide search keywords"
         
         client = get_client()
         limit = min(max(limit, 1), 50)
         
-        # 設定搜尋參數
+        # Set search parameters
         params = {
-            'limit': limit * 3,  # 取得更多結果以便篩選
+            'limit': limit * 3,  # Get more results to filter
             'sort': 'updated_on:desc'
         }
         
         if project_id:
             params['project_id'] = project_id
         
-        # 取得議題列表
+        # Get a list of issues
         all_issues = client.list_issues(**params)
         
-        # 在本地端進行關鍵字篩選 (因為 Redmine API 沒有內建搜尋)
+        # Perform keyword filtering locally (because the Redmine API does not have built-in search)
         query_lower = query.lower()
         matching_issues = []
         
@@ -582,16 +582,16 @@ def search_issues(query: str, project_id: int = None, limit: int = 10) -> str:
                     break
         
         if not matching_issues:
-            search_scope = f"專案 {project_id}" if project_id else "所有可存取的專案"
-            return f"在 {search_scope} 中沒有找到包含 '{query}' 的議題"
+            search_scope = f"project {project_id}" if project_id else "All accessible projects"
+            return f"exist {search_scope} Not found containing '{query}' issues"
         
-        # 格式化結果
-        result = f"搜尋關鍵字: '{query}'\n"
+        # Format results
+        result = f"Search keyword: '{query}'\n"
         if project_id:
-            result += f"搜尋範圍: 專案 {project_id}\n"
-        result += f"找到 {len(matching_issues)} 個相關議題:\n\n"
+            result += f"Search scope: Project {project_id}\n"
+        result += f"Found {len(matching_issues)} related issues:\n\n"
         
-        result += f"{'ID':<8} {'標題':<35} {'狀態':<12} {'專案':<15}\n"
+        result += f"{'ID':<8} {'title':<35} {'state':<12} {'project':<15}\n"
         result += f"{'-'*8} {'-'*35} {'-'*12} {'-'*15}\n"
         
         for issue in matching_issues:
@@ -604,9 +604,9 @@ def search_issues(query: str, project_id: int = None, limit: int = 10) -> str:
         return result
         
     except RedmineAPIError as e:
-        return f"搜尋議題失敗: {str(e)}"
+        return f"Search for issue failed: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
@@ -618,155 +618,155 @@ def update_issue_content(issue_id: int, subject: str = None, description: str = 
                         category_id: int = None, category_name: str = None,
                         custom_fields: list[dict] = None) -> str:
     """
-    更新議題內容（標題、描述、優先級、完成度、追蹤器、分類、日期、工時、自訂欄位等）
+    Update issue content (title, description, priority, completion, tracker, category, date, hours, custom fields, etc.)
 
     Args:
-        issue_id: 議題 ID
-        subject: 新的議題標題（可選）
-        description: 新的議題描述（可選）
-        priority_id: 新的優先級 ID（與 priority_name 二選一）
-        priority_name: 新的優先級名稱（與 priority_id 二選一）
-        done_ratio: 新的完成百分比 0-100（可選）
-        tracker_id: 新的追蹤器 ID（與 tracker_name 二選一）
-        tracker_name: 新的追蹤器名稱（與 tracker_id 二選一）
-        parent_issue_id: 新的父議題 ID（可選）
-        remove_parent: 是否移除父議題關係（可選）
-        start_date: 新的開始日期 YYYY-MM-DD 格式（可選）
-        due_date: 新的完成日期 YYYY-MM-DD 格式（可選）
-        estimated_hours: 新的預估工時（可選）
-        category_id: 議題分類 ID（與 category_name 二選一，可選，專案層級）
-        category_name: 議題分類名稱（與 category_id 二選一，可選，需先取得議題以確認所屬專案）
-        custom_fields: 自訂欄位列表（可選），格式: [{"id": 23, "value": "2026-03-01"}, ...]
+        issue_id: Issue ID
+        subject: new topic title (optional)
+        description: new issue description (optional)
+        priority_id: new priority ID (choose one from priority_name)
+        priority_name: new priority name (choose one from priority_id)
+        done_ratio: new completion percentage 0-100 (optional)
+        tracker_id: new tracker ID (alternative to tracker_name)
+        tracker_name: new tracker name (choose one from tracker_id)
+        parent_issue_id: new parent issue ID (optional)
+        remove_parent: whether to remove the parent issue relationship (optional)
+        start_date: new start date in YYYY-MM-DD format (optional)
+        due_date: new completion date in YYYY-MM-DD format (optional)
+        estimated_hours: new estimated hours (optional)
+        category_id: Issue category ID (choose one from category_name, optional, project level)
+        category_name: topic category name (choose one from category_id, optional, you need to obtain the topic first to confirm the project it belongs to)
+        custom_fields: Custom fields list (optional), format: [{"id": 23, "value": "2026-03-01"}, ...]
 
     Returns:
-        更新結果訊息
+        Update result message
     """
     try:
         client = get_client()
         
-        # 準備更新資料
+        # Prepare to update information
         update_data = {}
         changes = []
         
         if subject is not None:
             update_data['subject'] = subject.strip()
-            changes.append(f"標題: {subject}")
+            changes.append(f"Subject: {subject}")
         
         if description is not None:
             update_data['description'] = description
-            changes.append("描述已更新")
+            changes.append("Description updated")
         
-        # 處理優先級參數
+        # Handle priority parameters
         if priority_name:
             priority_id = client.find_priority_id_by_name(priority_name)
             if not priority_id:
-                return f"找不到優先級名稱：「{priority_name}」\n\n可用優先級：\n" + "\n".join([f"- {name}" for name in client.get_available_priorities().keys()])
+                return f'Priority name not found: "{priority_name}"\n\nAvailable priorities: \n' + "\n".join([f"- {name}" for name in client.get_available_priorities().keys()])
         
         if priority_id is not None:
             update_data['priority_id'] = priority_id
-            changes.append(f"優先級 ID: {priority_id}")
+            changes.append(f"Priority ID: {priority_id}")
         
         if done_ratio is not None:
             if not (0 <= done_ratio <= 100):
-                return "錯誤: 完成百分比必須在 0-100 之間"
+                return "Error: Complete percentage must be between 0-100"
             update_data['done_ratio'] = done_ratio
-            changes.append(f"完成度: {done_ratio}%")
+            changes.append(f"Done ratio: {done_ratio}%")
         
-        # 處理追蹤器參數
+        # Handling tracker parameters
         if tracker_name:
             tracker_id = client.find_tracker_id_by_name(tracker_name)
             if not tracker_id:
-                return f"找不到追蹤器名稱：「{tracker_name}」\n\n可用追蹤器：\n" + "\n".join([f"- {name}" for name in client.get_available_trackers().keys()])
+                return f'Tracker name not found: "{tracker_name}"\n\nAvailable trackers: \n' + "\n".join([f"- {name}" for name in client.get_available_trackers().keys()])
         
         if tracker_id is not None:
             update_data['tracker_id'] = tracker_id
-            changes.append(f"追蹤器 ID: {tracker_id}")
+            changes.append(f"Tracker ID: {tracker_id}")
         
         if remove_parent:
             update_data['parent_issue_id'] = None
-            changes.append("移除父議題關係")
+            changes.append("Remove parent issue relationship")
         elif parent_issue_id is not None:
             update_data['parent_issue_id'] = parent_issue_id
-            changes.append(f"父議題 ID: {parent_issue_id}")
+            changes.append(f"Parent issue ID: {parent_issue_id}")
         
         if start_date is not None:
-            # 驗證日期格式
+            # Validate date format
             try:
                 from datetime import datetime
                 datetime.strptime(start_date, '%Y-%m-%d')
                 update_data['start_date'] = start_date
-                changes.append(f"開始日期: {start_date}")
+                changes.append(f"start date: {start_date}")
             except ValueError:
-                return "錯誤: 開始日期格式必須為 YYYY-MM-DD"
+                return "Error: Start date format must be YYYY-MM-DD"
         
         if due_date is not None:
-            # 驗證日期格式
+            # Validate date format
             try:
                 from datetime import datetime
                 datetime.strptime(due_date, '%Y-%m-%d')
                 update_data['due_date'] = due_date
-                changes.append(f"完成日期: {due_date}")
+                changes.append(f"Completion date: {due_date}")
             except ValueError:
-                return "錯誤: 完成日期格式必須為 YYYY-MM-DD"
+                return "Error: Completion date format must be YYYY-MM-DD"
         
         if estimated_hours is not None:
             if estimated_hours < 0:
-                return "錯誤: 預估工時不能為負數"
+                return "Error: Estimated hours cannot be negative"
             update_data['estimated_hours'] = estimated_hours
-            changes.append(f"預估工時: {estimated_hours} 小時")
+            changes.append(f"Estimated hours: {estimated_hours}")
 
         if category_name:
-            # 需要先取得議題的 project_id 來查詢分類
+            # You need to get the project_id of the issue first to query the classification
             issue_info = client.get_issue(issue_id)
             project_id = issue_info.project.get('id')
             category_id = client.find_category_id_by_name(project_id, category_name)
             if not category_id:
                 available = client.get_available_categories(project_id)
                 if available:
-                    return f"找不到分類名稱：「{category_name}」\n\n此專案可用分類：\n" + "\n".join([f"- {name}" for name in available.keys()])
+                    return f'Category name not found: "{category_name}"\n\nAvailable categories for this project: \n' + "\n".join([f"- {name}" for name in available.keys()])
                 else:
-                    return f"找不到分類名稱：「{category_name}」\n\n此專案尚未設定議題分類"
+                    return f'Category name not found: "{category_name}"\n\nThis project has not yet set an issue classification'
 
         if category_id is not None:
             update_data['category_id'] = category_id
-            changes.append(f"分類 ID: {category_id}")
+            changes.append(f"Category ID: {category_id}")
 
         if custom_fields is not None:
             if not isinstance(custom_fields, list):
-                return "錯誤: custom_fields 必須是列表格式，例如 [{\"id\": 23, \"value\": \"2026-03-01\"}]"
+                return "Error: custom_fields must be in list format, e.g. [{\"id\": 23, \"value\": \"2026-03-01\"}]"
             for cf in custom_fields:
                 if 'id' not in cf or 'value' not in cf:
-                    return "錯誤: 每個自訂欄位必須包含 'id' 和 'value'，例如 {\"id\": 23, \"value\": \"2026-03-01\"}"
+                    return "Error: Each custom field must contain 'id' and 'value', for example {\"id\": 23, \"value\": \"2026-03-01\"}"
             update_data['custom_fields'] = custom_fields
-            changes.append(f"自訂欄位: {len(custom_fields)} 個欄位已更新")
+            changes.append(f"Custom fields: {len(custom_fields)} fields updated")
 
         if not update_data and not changes:
-            return "錯誤: 請至少提供一個要更新的欄位"
+            return "Error: Please provide at least one field to update"
         
-        # 執行更新
+        # perform update
         client.update_issue(issue_id, **update_data)
         
-        # 取得更新後的議題資訊
+        # Get updated issue information
         updated_issue = client.get_issue(issue_id)
         
-        result = f"""議題內容更新成功!
+        result = f"""Issue content updated successfully!
 
-議題: #{issue_id} - {updated_issue.subject}
-已更新的欄位:
+Issue: #{issue_id} - {updated_issue.subject}
+Updated fields:
 {chr(10).join(f"- {change}" for change in changes)}
 
-目前狀態:
-- 追蹤器: {updated_issue.tracker.get('name', 'N/A')}
-- 狀態: {updated_issue.status.get('name', 'N/A')}
-- 優先級: {updated_issue.priority.get('name', 'N/A')}
-- 完成度: {updated_issue.done_ratio}%"""
+Current status:
+- Tracker: {updated_issue.tracker.get('name', 'N/A')}
+- Status: {updated_issue.status.get('name', 'N/A')}
+- Priority: {updated_issue.priority.get('name', 'N/A')}
+- Done ratio: {updated_issue.done_ratio}%"""
 
         return result
         
     except RedmineAPIError as e:
-        return f"更新議題內容失敗: {str(e)}"
+        return f"Failed to update issue content: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
@@ -774,44 +774,44 @@ def add_issue_note(issue_id: int, notes: str, private: bool = False,
                    spent_hours: float = None, activity_name: str = None, 
                    activity_id: int = None, spent_on: str = None) -> str:
     """
-    為議題新增備註，可同時記錄時間
+    Add notes to the topic and record the time at the same time
     
     Args:
-        issue_id: 議題 ID
-        notes: 備註內容
-        private: 是否為私有備註（預設否）
-        spent_hours: 耗用工時（小時）
-        activity_name: 活動名稱（與 activity_id 二選一）
-        activity_id: 活動 ID（與 activity_name 二選一）
-        spent_on: 記錄日期 YYYY-MM-DD 格式（可選，預設今日）
+        issue_id: Issue ID
+        notes: Note content
+        private: whether the comment is private (default is no)
+        spent_hours: Spent working hours (hours)
+        activity_name: activity name (choose one from activity_id)
+        activity_id: Activity ID (choose one from activity_name)
+        spent_on: Record date in YYYY-MM-DD format (optional, default is today)
     
     Returns:
-        新增結果訊息
+        Add result message
     """
     try:
         if not notes.strip():
-            return "錯誤: 備註內容不能為空"
+            return "Error: Note content cannot be empty"
         
         client = get_client()
         time_entry_id = None
         
-        # 處理時間記錄
+        # Processing time record
         if spent_hours is not None:
             if spent_hours <= 0:
-                return "錯誤: 耗用工時必須大於 0"
+                return "Error: Spent hours must be greater than 0"
             
-            # 處理活動參數
+            # Handle activity parameters
             final_activity_id = activity_id
             if activity_name:
                 final_activity_id = client.find_time_entry_activity_id_by_name(activity_name)
                 if not final_activity_id:
                     available_activities = client.get_available_time_entry_activities()
-                    return f"找不到時間追蹤活動名稱：「{activity_name}」\n\n可用活動：\n" + "\n".join([f"- {name}" for name in available_activities.keys()])
+                    return f'Time tracking activity name not found: "{activity_name}"\n\nAvailable activities: \n' + "\n".join([f"- {name}" for name in available_activities.keys()])
             
             if not final_activity_id:
-                return "錯誤: 必須提供 activity_id 或 activity_name 參數"
+                return "Error: activity_id or activity_name parameter must be provided"
             
-            # 建立時間記錄
+            # Create time record
             try:
                 time_entry_id = client.create_time_entry(
                     issue_id=issue_id,
@@ -821,117 +821,117 @@ def add_issue_note(issue_id: int, notes: str, private: bool = False,
                     spent_on=spent_on
                 )
             except Exception as e:
-                return f"建立時間記錄失敗: {str(e)}"
+                return f"Failed to create time record: {str(e)}"
         
-        # 準備更新資料（新增備註）
+        # Prepare updated information (added remarks)
         update_data = {'notes': notes.strip()}
         if private:
             update_data['private_notes'] = True
         
-        # 執行更新
+        # perform update
         client.update_issue(issue_id, **update_data)
         
-        # 取得議題資訊
+        # Get issue information
         issue = client.get_issue(issue_id)
         
-        privacy_text = "私有" if private else "公開"
-        result = f"""備註新增成功!
+        privacy_text = "private" if private else "public"
+        result = f"""Note added successfully!
 
-議題: #{issue_id} - {issue.subject}
-備註類型: {privacy_text}
-備註內容:
+Issue: #{issue_id} - {issue.subject}
+Note type: {privacy_text}
+Remarks:
 {notes.strip()}"""
 
-        # 如果有建立時間記錄，添加相關資訊
+        # If there is a creation time record, add relevant information
         if time_entry_id:
             from datetime import date
             actual_date = spent_on if spent_on else date.today().strftime('%Y-%m-%d')
             activity_name_display = activity_name if activity_name else f"ID {final_activity_id}"
             result += f"""
 
-時間記錄新增成功!
-- 時間記錄 ID: {time_entry_id}
-- 耗用工時: {spent_hours} 小時
-- 活動: {activity_name_display}
-- 記錄日期: {actual_date}"""
+Time record added successfully!
+- Time record ID: {time_entry_id}
+- Man hours consumed: {spent_hours} hours
+- Activities: {activity_name_display}
+- Date recorded: {actual_date}"""
 
         return result
         
     except RedmineAPIError as e:
-        return f"新增議題備註失敗: {str(e)}"
+        return f"Failed to add topic notes: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
 def assign_issue(issue_id: int, user_id: int = None, user_name: str = None, user_login: str = None, notes: str = "") -> str:
     """
-    指派議題給用戶
+    Assign issues to users
     
     Args:
-        issue_id: 議題 ID
-        user_id: 指派給的用戶 ID（與 user_name/user_login 三選一）
-        user_name: 指派給的用戶姓名（與 user_id/user_login 三選一）
-        user_login: 指派給的用戶登入名（與 user_id/user_name 三選一）
-        notes: 指派備註（可選）
+        issue_id: Issue ID
+        user_id: assigned user ID (choose one from user_name/user_login)
+        user_name: assigned user name (choose one from user_id/user_login)
+        user_login: assigned user login name (choose one from user_id/user_name)
+        notes: Assign notes (optional)
     
     Returns:
-        指派結果訊息
+        Assignment result message
     """
     try:
         client = get_client()
         
-        # 處理用戶參數
+        # Handle user parameters
         final_user_id = user_id
         if user_name:
             final_user_id = client.find_user_id_by_name(user_name)
             if not final_user_id:
                 users = client.get_available_users()
-                return f"找不到用戶姓名：「{user_name}」\n\n可用用戶（姓名）：\n" + "\n".join([f"- {name}" for name in users['by_name'].keys()])
+                return f'Username not found: "{user_name}"\n\n Available users (name): \n' + "\n".join([f"- {name}" for name in users['by_name'].keys()])
         elif user_login:
             final_user_id = client.find_user_id_by_login(user_login)
             if not final_user_id:
                 users = client.get_available_users()
-                return f"找不到用戶登入名：「{user_login}」\n\n可用用戶（登入名）：\n" + "\n".join([f"- {login}" for login in users['by_login'].keys()])
+                return f'User login name not found: "{user_login}"\n\n Available users (login name): \n' + "\n".join([f"- {login}" for login in users['by_login'].keys()])
         
-        # 準備更新資料
+        # Prepare to update information
         update_data = {}
         
         if final_user_id is not None:
             update_data['assigned_to_id'] = final_user_id
-            action_text = f"指派給用戶 ID {final_user_id}"
+            action_text = f"Assigned to user ID {final_user_id}"
         else:
             update_data['assigned_to_id'] = None
-            action_text = "取消指派"
+            action_text = "Unassign"
         
         if notes.strip():
             update_data['notes'] = notes.strip()
         
-        # 執行更新
+        # perform update
         client.update_issue(issue_id, **update_data)
         
-        # 取得更新後的議題資訊
+        # Get updated issue information
         updated_issue = client.get_issue(issue_id)
         
-        assignee_name = "未指派"
+        assignee_name = "Not assigned"
         if updated_issue.assigned_to:
-            assignee_name = updated_issue.assigned_to.get('name', f"用戶 ID {user_id}")
+            assignee_name = updated_issue.assigned_to.get('name', f"User ID {user_id}")
         
-        result = f"""議題指派更新成功!
+        result = f"""Topic assignment updated successfully!
 
-議題: #{issue_id} - {updated_issue.subject}
-動作: {action_text}
-目前指派給: {assignee_name}"""
+Issue: #{issue_id} - {updated_issue.subject}
+Action: {action_text}
+Currently assigned to: {assignee_name}"""
 
         if notes.strip():
-            result += f"\n備註: {notes}"
+            result += f"\nRemarks: {notes}"
 
         return result
         
     except RedmineAPIError as e:
-        return f"指派議題失敗: {str(e)}"
+        return f"Failed to assign issue: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
@@ -943,101 +943,101 @@ def create_new_issue(project_id: int, subject: str, description: str = "",
                     estimated_hours: float = None, status_id: int = None, status_name: str = None,
                     category_id: int = None, category_name: str = None) -> str:
     """
-    建立新的 Redmine 議題
+    Create a new Redmine issue
 
-    建議標題格式: [型態] 問題描述，例如：
-    - [功能開發] 評鑑提交完成頁面邏輯
-    - [介面修正] 題目列表切換語系 Dialog 文字統一
-    - [後台Bug] 新增題目預設展開與刪除按鈕異常
+    Recommended title format: [Type] Problem description, for example:
+    - [Function Development] Evaluation submission completion page logic
+    - [Interface Correction] The question list switches the language and the Dialog text is unified
+    - [Backend Bug] The default expansion and delete buttons for new questions are abnormal
 
-    常用型態: [介面修正] [功能開發] [前端優化] [後台Bug] [E2E測試] [資料庫] [Devops] [重構] [文件]
+    Commonly used types: [Interface modification] [Function development] [Front-end optimization] [Backend Bug] [E2E testing] [Database] [Devops] [Refactoring] [Documents]
 
     Args:
-        project_id: 專案 ID
-        subject: 議題標題（建議加上 [型態] 前綴）
-        description: 議題描述（可選）
-        tracker_id: 追蹤器 ID（與 tracker_name 二選一）
-        tracker_name: 追蹤器名稱（與 tracker_id 二選一）
-        priority_id: 優先級 ID（與 priority_name 二選一）
-        priority_name: 優先級名稱（與 priority_id 二選一）
-        assigned_to_id: 指派給的用戶 ID（與 assigned_to_name/assigned_to_login 三選一）
-        assigned_to_name: 指派給的用戶姓名（與 assigned_to_id/assigned_to_login 三選一）
-        assigned_to_login: 指派給的用戶登入名（與 assigned_to_id/assigned_to_name 三選一）
-        parent_issue_id: 父議題 ID（可選，用於建立子議題）
-        start_date: 開始日期 YYYY-MM-DD 格式（可選）
-        due_date: 完成日期 YYYY-MM-DD 格式（可選）
-        estimated_hours: 預估工時（可選）
-        status_id: 初始狀態 ID（與 status_name 二選一，可選）
-        status_name: 初始狀態名稱（與 status_id 二選一，可選）
-        category_id: 議題分類 ID（與 category_name 二選一，可選，專案層級）
-        category_name: 議題分類名稱（與 category_id 二選一，可選，專案層級）
+        project_id: Project ID
+        subject: topic title (it is recommended to add the [type] prefix)
+        description: topic description (optional)
+        tracker_id: Tracker ID (optional with tracker_name)
+        tracker_name: tracker name (choose one from tracker_id)
+        priority_id: priority ID (choose one from priority_name)
+        priority_name: priority name (choose one from priority_id)
+        assigned_to_id: assigned user ID (choose one from assigned_to_name/assigned_to_login)
+        assigned_to_name: assigned user name (choose one of three assigned_to_id/assigned_to_login)
+        assigned_to_login: assigned user login name (choose one of three assigned_to_id/assigned_to_name)
+        parent_issue_id: parent issue ID (optional, used to create child issues)
+        start_date: start date in YYYY-MM-DD format (optional)
+        due_date: completion date in YYYY-MM-DD format (optional)
+        estimated_hours: estimated hours (optional)
+        status_id: initial status ID (choose one from status_name, optional)
+        status_name: initial status name (choose one from status_id, optional)
+        category_id: Issue category ID (choose one from category_name, optional, project level)
+        category_name: Issue category name (choose one from category_id, optional, project level)
 
     Returns:
-        建立結果訊息
+        Create result message
     """
     try:
         if not subject.strip():
-            return "錯誤: 議題標題不能為空"
+            return "Error: Issue title cannot be empty"
         
         client = get_client()
         
-        # 處理追蹤器參數
+        # Handling tracker parameters
         final_tracker_id = tracker_id
         if tracker_name:
             final_tracker_id = client.find_tracker_id_by_name(tracker_name)
             if not final_tracker_id:
-                return f"找不到追蹤器名稱：「{tracker_name}」\n\n可用追蹤器：\n" + "\n".join([f"- {name}" for name in client.get_available_trackers().keys()])
+                return f'Tracker name not found: "{tracker_name}"\n\nAvailable trackers: \n' + "\n".join([f"- {name}" for name in client.get_available_trackers().keys()])
         
-        # 處理優先級參數
+        # Handle priority parameters
         final_priority_id = priority_id
         if priority_name:
             final_priority_id = client.find_priority_id_by_name(priority_name)
             if not final_priority_id:
-                return f"找不到優先級名稱：「{priority_name}」\n\n可用優先級：\n" + "\n".join([f"- {name}" for name in client.get_available_priorities().keys()])
+                return f'Priority name not found: "{priority_name}"\n\nAvailable priorities: \n' + "\n".join([f"- {name}" for name in client.get_available_priorities().keys()])
         
-        # 處理指派用戶參數
+        # Handling assigned user parameters
         final_assigned_to_id = assigned_to_id
         if assigned_to_name:
             final_assigned_to_id = client.find_user_id_by_name(assigned_to_name)
             if not final_assigned_to_id:
                 users = client.get_available_users()
-                return f"找不到用戶姓名：「{assigned_to_name}」\n\n可用用戶（姓名）：\n" + "\n".join([f"- {name}" for name in users['by_name'].keys()])
+                return f'Username not found: "{assigned_to_name}"\n\n Available users (name): \n' + "\n".join([f"- {name}" for name in users['by_name'].keys()])
         elif assigned_to_login:
             final_assigned_to_id = client.find_user_id_by_login(assigned_to_login)
             if not final_assigned_to_id:
                 users = client.get_available_users()
-                return f"找不到用戶登入名：「{assigned_to_login}」\n\n可用用戶（登入名）：\n" + "\n".join([f"- {login}" for login in users['by_login'].keys()])
+                return f'User login name not found: "{assigned_to_login}"\n\n Available users (login name): \n' + "\n".join([f"- {login}" for login in users['by_login'].keys()])
         
-        # 處理狀態參數
+        # Processing status parameters
         final_status_id = status_id
         if status_name:
             final_status_id = client.find_status_id_by_name(status_name)
             if not final_status_id:
-                return f"找不到狀態名稱：「{status_name}」\n\n可用狀態：\n" + "\n".join([f"- {name}" for name in client.get_available_statuses().keys()])
+                return f'Status name not found: "{status_name}"\n\n Available status: \n' + "\n".join([f"- {name}" for name in client.get_available_statuses().keys()])
 
-        # 處理分類參數
+        # Handle classification parameters
         final_category_id = category_id
         if category_name:
             final_category_id = client.find_category_id_by_name(project_id, category_name)
             if not final_category_id:
                 available = client.get_available_categories(project_id)
                 if available:
-                    return f"找不到分類名稱：「{category_name}」\n\n此專案可用分類：\n" + "\n".join([f"- {name}" for name in available.keys()])
+                    return f'Category name not found: "{category_name}"\n\nAvailable categories for this project: \n' + "\n".join([f"- {name}" for name in available.keys()])
                 else:
-                    return f"找不到分類名稱：「{category_name}」\n\n此專案尚未設定議題分類"
+                    return f'Category name not found: "{category_name}"\n\nThis project has not yet set an issue classification'
 
-        # 驗證日期格式
-        for date_label, date_val in [("開始日期", start_date), ("完成日期", due_date)]:
+        # Validate date format
+        for date_label, date_val in [("start date", start_date), ("completion date", due_date)]:
             if date_val is not None:
                 try:
                     datetime.strptime(date_val, '%Y-%m-%d')
                 except ValueError:
-                    return f"錯誤: {date_label}格式必須為 YYYY-MM-DD"
+                    return f"mistake: {date_label}The format must be YYYY-MM-DD"
 
         if estimated_hours is not None and estimated_hours < 0:
-            return "錯誤: 預估工時不能為負數"
+            return "Error: Estimated hours cannot be negative"
 
-        # 建立議題
+        # Create an issue
         new_issue_id = client.create_issue(
             project_id=project_id,
             subject=subject.strip(),
@@ -1053,87 +1053,87 @@ def create_new_issue(project_id: int, subject: str, description: str = "",
             category_id=final_category_id,
         )
         
-        # 取得建立的議題資訊
+        # Get created issue information
         new_issue = client.get_issue(new_issue_id)
         
-        result = f"""新議題建立成功!
+        result = f"""New issue created successfully!
 
-議題 ID: #{new_issue_id}
-標題: {new_issue.subject}
-專案: {new_issue.project.get('name', 'N/A')}
-追蹤器: {new_issue.tracker.get('name', 'N/A')}
-狀態: {new_issue.status.get('name', 'N/A')}
-優先級: {new_issue.priority.get('name', 'N/A')}
-指派給: {new_issue.assigned_to.get('name', '未指派') if new_issue.assigned_to else '未指派'}"""
+Issue ID: #{new_issue_id}
+Subject: {new_issue.subject}
+Project: {new_issue.project.get('name', 'N/A')}
+Tracker: {new_issue.tracker.get('name', 'N/A')}
+Status: {new_issue.status.get('name', 'N/A')}
+Priority: {new_issue.priority.get('name', 'N/A')}
+Assigned to: {new_issue.assigned_to.get('name', 'Not assigned') if new_issue.assigned_to else 'Not assigned'}"""
 
         if parent_issue_id:
-            result += f"\n父議題: #{parent_issue_id}"
+            result += f"\nParent issue: #{parent_issue_id}"
         if start_date:
-            result += f"\n開始日期: {start_date}"
+            result += f"\nStart date: {start_date}"
         if due_date:
-            result += f"\n完成日期: {due_date}"
+            result += f"\nCompletion date: {due_date}"
         if estimated_hours is not None:
-            result += f"\n預估工時: {estimated_hours} 小時"
+            result += f"\nEstimated hours: {estimated_hours}"
 
         if description:
-            result += f"\n\n描述:\n{description}"
+            result += f"\n\nDescription:\n{description}"
 
         return result
         
     except RedmineAPIError as e:
-        return f"建立議題失敗: {str(e)}"
+        return f"Failed to create issue: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
 def get_my_issues(status_filter: str = "open", limit: int = 20) -> str:
     """
-    取得指派給我的議題列表
+    Get a list of issues assigned to me
     
     Args:
-        status_filter: 狀態篩選 ("open", "closed", "all")
-        limit: 最大回傳數量 (預設 20，最大 100)
+        status_filter: status filter ("open", "closed", "all")
+        limit: maximum number of return requests (default 20, maximum 100)
     
     Returns:
-        我的議題列表
+        My issue list
     """
     try:
         client = get_client()
         
-        # 先取得當前用戶資訊
+        # Get current user information first
         current_user = client.get_current_user()
         user_id = current_user['id']
         user_name = current_user.get('firstname', '') + ' ' + current_user.get('lastname', '')
         
-        # 限制 limit 範圍
+        # limit limit range
         limit = min(max(limit, 1), 100)
         
-        # 設定查詢參數
+        # Set query parameters
         params = {
             'assigned_to_id': user_id,
             'limit': limit,
             'sort': 'updated_on:desc'
         }
         
-        # 處理狀態篩選
+        # Processing status filter
         if status_filter == "open":
-            params['status_id'] = 'o'  # Redmine API 使用 'o' 表示開放狀態
+            params['status_id'] = 'o'  # Redmine API uses 'o' to indicate open status
         elif status_filter == "closed":
-            params['status_id'] = 'c'  # Redmine API 使用 'c' 表示關閉狀態
+            params['status_id'] = 'c'  # Redmine API uses 'c' to indicate closed status
         
-        # 取得議題列表
+        # Get a list of issues
         issues = client.list_issues(**params)
         
         if not issues:
-            return f"沒有找到指派給 {user_name.strip()} 的{status_filter}議題"
+            return f"Assigned to {user_name.strip()} of{status_filter}issue"
         
-        # 格式化結果
-        result = f"""指派給 {user_name.strip()} 的議題:
-狀態篩選: {status_filter}
-找到 {len(issues)} 個議題:
+        # Format results
+        result = f"""Issues assigned to {user_name.strip()}:
+Status filter: {status_filter}
+Found {len(issues)} issues:
 
-{"ID":<8} {"標題":<35} {"專案":<15} {"狀態":<12} {"更新時間":<10}
+{"ID":<8} {"title":<35} {"project":<15} {"state":<12} {"Update time":<10}
 {"-"*8} {"-"*35} {"-"*15} {"-"*12} {"-"*10}"""
 
         for issue in issues:
@@ -1147,28 +1147,28 @@ def get_my_issues(status_filter: str = "open", limit: int = 20) -> str:
         return result
         
     except RedmineAPIError as e:
-        return f"取得我的議題失敗: {str(e)}"
+        return f"Failed to get my issue: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
 def close_issue(issue_id: int, notes: str = "", done_ratio: int = 100) -> str:
     """
-    關閉議題（設定為已完成狀態）
+    Close the issue (set to completed status)
     
     Args:
-        issue_id: 議題 ID
-        notes: 關閉備註（可選）
-        done_ratio: 完成百分比（預設 100%）
+        issue_id: Issue ID
+        notes: Close notes (optional)
+        done_ratio: completion percentage (default 100%)
     
     Returns:
-        關閉結果訊息
+        Close results message
     """
     try:
         client = get_client()
         
-        # 取得可用狀態列表，尋找關閉狀態
+        # Get a list of available states and look for closed states
         statuses = client.get_issue_statuses()
         closed_status_id = None
         
@@ -1178,9 +1178,9 @@ def close_issue(issue_id: int, notes: str = "", done_ratio: int = 100) -> str:
                 break
         
         if closed_status_id is None:
-            return "錯誤: 找不到可用的關閉狀態"
+            return "Error: No available shutdown status found"
         
-        # 準備更新資料
+        # Prepare to update information
         update_data = {
             'status_id': closed_status_id,
             'done_ratio': min(max(done_ratio, 0), 100)
@@ -1189,27 +1189,27 @@ def close_issue(issue_id: int, notes: str = "", done_ratio: int = 100) -> str:
         if notes.strip():
             update_data['notes'] = notes.strip()
         
-        # 執行更新
+        # perform update
         client.update_issue(issue_id, **update_data)
         
-        # 取得更新後的議題資訊
+        # Get updated issue information
         updated_issue = client.get_issue(issue_id)
         
-        result = f"""議題關閉成功!
+        result = f"""Issue closed successfully!
 
-議題: #{issue_id} - {updated_issue.subject}
-狀態: {updated_issue.status.get('name', 'N/A')}
-完成度: {updated_issue.done_ratio}%"""
+Issue: #{issue_id} - {updated_issue.subject}
+Status: {updated_issue.status.get('name', 'N/A')}
+Done ratio: {updated_issue.done_ratio}%"""
 
         if notes.strip():
-            result += f"\n關閉備註: {notes}"
+            result += f"\nClose Notes: {notes}"
 
         return result
         
     except RedmineAPIError as e:
-        return f"關閉議題失敗: {str(e)}"
+        return f"Failed to close issue: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
@@ -1217,7 +1217,7 @@ def resolve_issue(
     issue_id: int,
     notes: str = "",
     custom_fields: list[dict] = None,
-    status_name: str = "已解決",
+    status_name: str = "Resolved",
     status_id: int = None,
     done_ratio: int = 100,
     spent_hours: float = None,
@@ -1225,15 +1225,15 @@ def resolve_issue(
     activity_id: int = None,
 ) -> str:
     """
-    標記議題為已解決（複合操作）
+    Mark issue as resolved (composite operation)
 
-    一次完成：更新狀態、設定完成度、填寫自訂欄位、新增備註，以及可選的時間記錄。
-    適用於開發完成後的標準結案流程。
+    Complete it all at once: update status, set completion level, fill in custom fields, add notes, and optional time records.
+    It applies to the standard closing process after development is completed.
 
-    典型用法:
+    Typical usage:
         resolve_issue(
             issue_id=123,
-            notes="commit abc1234\\n修改摘要：\\n- 完成功能開發\\n- 通過單元測試",
+            notes="commit abc1234\\nModification summary: \\n- Complete functional development\\n- Pass unit testing",
             custom_fields=[
                 {"id": 23, "value": "2026-03-07"},
                 {"id": 64, "value": "2026-03-07"}
@@ -1241,30 +1241,30 @@ def resolve_issue(
         )
 
     Args:
-        issue_id: 議題 ID
-        notes: 解決備註（建議包含 commit hash 和修改摘要）
-        custom_fields: 自訂欄位列表（可選），例如 [{"id": 23, "value": "2026-03-07"}]
-        status_name: 目標狀態名稱（預設「已解決」，可改為其他狀態）
-        status_id: 目標狀態 ID（優先於 status_name）
-        done_ratio: 完成百分比（預設 100）
-        spent_hours: 花費工時（可選，同時記錄時間）
-        activity_name: 時間記錄活動名稱（與 activity_id 二選一，spent_hours 有值時才生效）
-        activity_id: 時間記錄活動 ID（與 activity_name 二選一）
+        issue_id: Issue ID
+        notes: Solution notes (it is recommended to include commit hash and modification summary)
+        custom_fields: custom fields list (optional), for example [{"id": 23, "value": "2026-03-07"}]
+        status_name: target status name (default "resolved", can be changed to other status)
+        status_id: target status ID (takes precedence over status_name)
+        done_ratio: completion percentage (default 100)
+        spent_hours: hours spent (optional, record time at the same time)
+        activity_name: Time recording activity name (choose one from activity_id, it will take effect only when spent_hours has a value)
+        activity_id: Time recording activity ID (choose one from activity_name)
 
     Returns:
-        解決結果訊息
+        Resolution result message
     """
     try:
         client = get_client()
 
-        # 解析狀態
+        # parsing status
         final_status_id = status_id
         if not final_status_id:
             final_status_id = client.find_status_id_by_name(status_name)
             if not final_status_id:
-                return f"找不到狀態名稱：「{status_name}」\n\n可用狀態：\n" + "\n".join([f"- {name}" for name in client.get_available_statuses().keys()])
+                return f'Status name not found: "{status_name}"\n\n Available status: \n' + "\n".join([f"- {name}" for name in client.get_available_statuses().keys()])
 
-        # 準備更新資料
+        # Prepare to update information
         update_data = {
             'status_id': final_status_id,
             'done_ratio': min(max(done_ratio, 0), 100),
@@ -1276,19 +1276,19 @@ def resolve_issue(
         if custom_fields:
             for cf in custom_fields:
                 if 'id' not in cf or 'value' not in cf:
-                    return "錯誤: 每個自訂欄位必須包含 'id' 和 'value'"
+                    return "Error: Each custom field must contain 'id' and 'value'"
             update_data['custom_fields'] = custom_fields
 
-        # 一次 API 呼叫完成所有更新
+        # One API call for all updates
         client.update_issue(issue_id, **update_data)
 
-        # 記錄工時（如果有指定）
+        # Record hours worked (if specified)
         if spent_hours is not None and spent_hours > 0:
             final_activity_id = activity_id
             if activity_name:
                 final_activity_id = client.find_time_entry_activity_id_by_name(activity_name)
                 if not final_activity_id:
-                    return f"議題已解決，但時間記錄失敗：找不到活動名稱「{activity_name}」\n\n可用活動：\n" + "\n".join([f"- {name}" for name in client.get_available_time_entry_activities().keys()])
+                    return f'Issue resolved, but time recording failed: Activity name not found"{activity_name}"\n\nAvailable activities: \n' + "\n".join([f"- {name}" for name in client.get_available_time_entry_activities().keys()])
 
             if final_activity_id:
                 today = datetime.now().strftime('%Y-%m-%d')
@@ -1300,65 +1300,65 @@ def resolve_issue(
                     spent_on=today,
                 )
 
-        # 取得更新後的議題資訊
+        # Get updated issue information
         updated_issue = client.get_issue(issue_id)
 
-        result = f"""議題已解決!
+        result = f"""Issue resolved successfully!
 
-議題: #{issue_id} - {updated_issue.subject}
-狀態: {updated_issue.status.get('name', 'N/A')}
-完成度: {updated_issue.done_ratio}%"""
+Issue: #{issue_id} - {updated_issue.subject}
+Status: {updated_issue.status.get('name', 'N/A')}
+Done ratio: {updated_issue.done_ratio}%"""
 
         if custom_fields:
-            result += f"\n自訂欄位: {len(custom_fields)} 個已更新"
+            result += f"\nCustom fields: {len(custom_fields)} updated"
         if notes.strip():
-            result += f"\n備註: 已新增"
+            result += f"\n Note: Added"
         if spent_hours is not None and spent_hours > 0:
-            result += f"\n工時記錄: {spent_hours} 小時"
+            result += f"\nTime entry: {spent_hours} hours"
 
         return result
 
     except RedmineAPIError as e:
-        return f"解決議題失敗: {str(e)}"
+        return f"Issue resolution failed: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
 def start_working(
     issue_id: int,
-    status_name: str = "實作中",
+    status_name: str = "In practice",
     status_id: int = None,
     notes: str = "",
     set_start_date: bool = True,
     assign_to_me: bool = True,
 ) -> str:
     """
-    開始處理議題（複合操作）
+    Start processing an issue (composite operation)
 
-    一次完成：更新狀態為實作中、設定開始日期、指派給自己。
-    與 resolve_issue 形成完整的工作流閉環。
+    Complete it once: Update the status to Implementing, set the start date, and assign it to yourself.
+    Form a complete workflow closed loop with resolve_issue.
 
     Args:
-        issue_id: 議題 ID
-        status_name: 目標狀態名稱（預設「實作中」）
-        status_id: 目標狀態 ID（優先於 status_name）
-        notes: 開始處理的備註（可選）
-        set_start_date: 是否自動設定開始日期為今天（預設 True）
-        assign_to_me: 是否指派給自己（預設 True，使用 API Key 對應的用戶）
+        issue_id: Issue ID
+        status_name: target status name (default is "implementing")
+        status_id: target status ID (takes precedence over status_name)
+        notes: Notes to start processing (optional)
+        set_start_date: Whether to automatically set the start date to today (default True)
+        assign_to_me: Whether to assign it to yourself (default True, use the user corresponding to the API Key)
 
     Returns:
-        操作結果訊息
+        Operation result message
     """
     try:
         client = get_client()
 
-        # 解析狀態
+        # parsing status
         final_status_id = status_id
         if not final_status_id:
             final_status_id = client.find_status_id_by_name(status_name)
             if not final_status_id:
-                return f"找不到狀態名稱：「{status_name}」\n\n可用狀態：\n" + "\n".join([f"- {name}" for name in client.get_available_statuses().keys()])
+                return f'Status name not found: "{status_name}"\n\n Available status: \n' + "\n".join([f"- {name}" for name in client.get_available_statuses().keys()])
 
         update_data = {
             'status_id': final_status_id,
@@ -1376,108 +1376,108 @@ def start_working(
 
         client.update_issue(issue_id, **update_data)
 
-        # 讀取更新後的議題（同時觸發快照保存）
+        # Read updated issues (trigger snapshot saving at the same time)
         include_params = ['journals', 'attachments', 'children', 'relations', 'watchers']
         issue_data = client.get_issue_raw(issue_id, include=include_params)
 
-        assigned_name = issue_data.get('assigned_to', {}).get('name', '未指派') if issue_data.get('assigned_to') else '未指派'
+        assigned_name = issue_data.get('assigned_to', {}).get('name', 'Not assigned') if issue_data.get('assigned_to') else 'Not assigned'
 
-        result = f"""開始處理議題!
+        result = f"""Start working on the issue!
 
-議題: #{issue_id} - {issue_data['subject']}
-狀態: {issue_data['status'].get('name', 'N/A')}
-指派給: {assigned_name}
-開始日期: {issue_data.get('start_date', 'N/A')}"""
+Issue: #{issue_id} - {issue_data['subject']}
+Status: {issue_data['status'].get('name', 'N/A')}
+Assigned to: {assigned_name}
+start date: {issue_data.get('start_date', 'N/A')}"""
 
         return result
 
     except RedmineAPIError as e:
-        return f"開始處理議題失敗: {str(e)}"
+        return f"Failed to start processing issue: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
 def check_issue_changes(issue_id: int) -> str:
     """
-    偵測議題自上次讀取後的變更
+    Detect changes to an issue since the last time it was read
 
-    比對議題目前狀態與上次讀取時的快照，列出所有變更項目。
-    需要先使用 get_issue 讀取過該議題才有快照可供比對。
+    Compare the current status of the issue with the snapshot when it was last read, and list all changes.
+    You need to use get_issue to read the issue before the snapshot is available for comparison.
 
     Args:
-        issue_id: 議題 ID
+        issue_id: Issue ID
 
     Returns:
-        變更摘要或無變更提示
+        Summary of changes or no change notification
     """
     try:
         client = get_client()
         snapshot = client.get_issue_snapshot(issue_id)
 
         if not snapshot:
-            return f"議題 #{issue_id} 沒有快照記錄，請先使用 get_issue({issue_id}) 讀取議題"
+            return f"Issue #{issue_id} There is no snapshot record, please use get_issue( first{issue_id}) read issue"
 
-        # 重新取得議題最新資料
+        # Retrieve the latest information on the topic
         include_params = ['journals', 'attachments', 'children', 'relations', 'watchers']
         current = client.get_issue_raw(issue_id, include=include_params)
 
         changes = []
 
-        # 比對基本欄位
+        # Compare basic fields
         current_status = current.get('status', {}).get('name')
         if current_status != snapshot['status']:
-            changes.append(f"狀態: {snapshot['status']} → {current_status}")
+            changes.append(f"Status: {snapshot['status']} → {current_status}")
 
         current_priority = current.get('priority', {}).get('name')
         if current_priority != snapshot['priority']:
-            changes.append(f"優先級: {snapshot['priority']} → {current_priority}")
+            changes.append(f"Priority: {snapshot['priority']} → {current_priority}")
 
         current_assigned = current.get('assigned_to', {}).get('name') if current.get('assigned_to') else None
         if current_assigned != snapshot['assigned_to']:
-            changes.append(f"指派給: {snapshot['assigned_to'] or '未指派'} → {current_assigned or '未指派'}")
+            changes.append(f"Assigned to: {snapshot['assigned_to'] or 'Not assigned'} → {current_assigned or 'Not assigned'}")
 
         current_done = current.get('done_ratio', 0)
         if current_done != snapshot['done_ratio']:
-            changes.append(f"完成度: {snapshot['done_ratio']}% → {current_done}%")
+            changes.append(f"Done ratio: {snapshot['done_ratio']}% → {current_done}%")
 
         current_subject = current.get('subject')
         if current_subject != snapshot['subject']:
-            changes.append(f"標題: {snapshot['subject']} → {current_subject}")
+            changes.append(f"Subject: {snapshot['subject']} → {current_subject}")
 
-        # 描述差異
+        # Describe the differences
         current_desc = current.get('description', '')
         old_desc = snapshot.get('description', '')
         if current_desc != old_desc:
-            # 計算差異摘要
+            # Calculate difference summary
             old_lines = old_desc.splitlines() if old_desc else []
             new_lines = current_desc.splitlines() if current_desc else []
             added = len(new_lines) - len(old_lines)
             if added > 0:
-                changes.append(f"描述: 新增約 {added} 行")
+                changes.append(f"Description: New contract {added} OK")
             elif added < 0:
-                changes.append(f"描述: 減少約 {abs(added)} 行")
+                changes.append(f"Description: Reduce approx. {abs(added)} OK")
             else:
-                changes.append("描述: 內容已修改")
+                changes.append("Description: Content has been modified")
 
-            # 顯示具體 diff
+            # Show specific diff
             import difflib
             diff = list(difflib.unified_diff(
                 old_lines, new_lines,
-                fromfile='上次讀取', tofile='目前',
+                fromfile='last read', tofile='at present',
                 lineterm='', n=2
             ))
             if diff:
-                diff_text = "\n".join(diff[:20])  # 最多顯示 20 行
+                diff_text = "\n".join(diff[:20])  # Display up to 20 lines
                 if len(diff) > 20:
-                    diff_text += f"\n... (共 {len(diff)} 行差異)"
-                changes.append(f"描述差異:\n{diff_text}")
+                    diff_text += f"\n... (Total {len(diff)} row differences)"
+                changes.append(f"Description difference:\n{diff_text}")
 
-        # 備註變更
+        # Remarks changes
         current_journals = current.get('journals', [])
         if len(current_journals) > snapshot['journals_count']:
             new_count = len(current_journals) - snapshot['journals_count']
-            changes.append(f"新增 {new_count} 筆備註:")
+            changes.append(f"New {new_count} Note:")
             for j in current_journals[-new_count:]:
                 author = j.get('user', {}).get('name', 'N/A')
                 notes = j.get('notes', '').strip()
@@ -1485,15 +1485,15 @@ def check_issue_changes(issue_id: int) -> str:
                     preview = notes[:100] + '...' if len(notes) > 100 else notes
                     changes.append(f"  - {author}: {preview}")
 
-        # 附件變更
+        # Attachment changes
         current_attachments = current.get('attachments', [])
         if len(current_attachments) > snapshot['attachments_count']:
             new_count = len(current_attachments) - snapshot['attachments_count']
-            changes.append(f"新增 {new_count} 個附件:")
+            changes.append(f"New {new_count} Attachments:")
             for att in current_attachments[-new_count:]:
                 changes.append(f"  - {att.get('filename', 'N/A')} ({att.get('author', {}).get('name', 'N/A')})")
 
-        # 自訂欄位變更
+        # Custom field changes
         current_cf = {
             cf.get('id'): cf.get('value')
             for cf in current.get('custom_fields', [])
@@ -1501,55 +1501,55 @@ def check_issue_changes(issue_id: int) -> str:
         for cf_id, old_val in snapshot.get('custom_fields', {}).items():
             new_val = current_cf.get(cf_id)
             if new_val != old_val:
-                # 找到欄位名稱
+                # Find the field name
                 cf_name = next(
                     (cf.get('name') for cf in current.get('custom_fields', []) if cf.get('id') == cf_id),
                     f"ID:{cf_id}"
                 )
-                changes.append(f"自訂欄位 [{cf_name}]: {old_val or '(空)'} → {new_val or '(空)'}")
+                changes.append(f"Custom fields [{cf_name}]: {old_val or '(null)'} → {new_val or '(null)'}")
 
-        # 輸出結果
+        # Output results
         snapshot_time = snapshot.get('snapshot_time', 'N/A')
 
         if not changes:
-            return f"議題 #{issue_id} 自上次讀取（{snapshot_time}）以來無變更"
+            return f"Issue #{issue_id} since last read ({snapshot_time}) No changes since"
 
-        result = f"議題 #{issue_id} 的變更（自 {snapshot_time} 以來）:\n"
+        result = f"Issue #{issue_id} changes (from {snapshot_time} since):\n"
         result += "=" * 50 + "\n"
         result += "\n".join(changes)
 
         return result
 
     except RedmineAPIError as e:
-        return f"偵測變更失敗: {str(e)}"
+        return f"Failed to detect changes: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
 def sync_my_issues(project_id: int = None, status_filter: str = "open", limit: int = 20) -> str:
     """
-    批次偵測指派給我的議題變更
+    Batch detection of changes to topics assigned to me
 
-    取得所有指派給我的議題，並與本地快照比對，
-    列出有變更的議題摘要。沒有快照的議題會標記為「首次讀取」。
+    Get all issues assigned to me and compare with local snapshot,
+    Lists a summary of topics that have changed. Issues without snapshots are marked as "first read".
 
     Args:
-        project_id: 專案 ID（可選，指定後僅同步該專案的議題）
-        status_filter: 狀態篩選 ("open", "closed", "all")
-        limit: 最大回傳數量（預設 20）
+        project_id: Project ID (optional, only the issues of this project will be synchronized after specifying)
+        status_filter: status filter ("open", "closed", "all")
+        limit: maximum number of postbacks (default 20)
 
     Returns:
-        所有指派給我的議題的變更摘要
+        Change summaries for all issues assigned to me
     """
     try:
         client = get_client()
 
-        # 取得當前用戶 ID
+        # Get current user ID
         current_user = client.get_current_user()
         my_user_id = current_user['id']
 
-        # 取得我的議題列表
+        # Get my issue list
         status_map = {'open': 'o', 'closed': 'c', 'all': '*', 'o': 'o', 'c': 'c', '*': '*'}
         status_param = status_map.get(status_filter, 'o')
         issues = client.list_issues(
@@ -1560,9 +1560,9 @@ def sync_my_issues(project_id: int = None, status_filter: str = "open", limit: i
             sort='updated_on:desc'
         )
 
-        project_hint = f"（專案 #{project_id}）" if project_id else ""
+        project_hint = f"(project #{project_id}）" if project_id else ""
         if not issues:
-            return f"目前沒有指派給我的議題{project_hint}"
+            return f"There are currently no issues assigned to me{project_hint}"
 
         changed_issues = []
         new_issues = []
@@ -1574,48 +1574,48 @@ def sync_my_issues(project_id: int = None, status_filter: str = "open", limit: i
 
             if not snapshot:
                 new_issues.append(issue)
-                # 讀取完整資料以建立快照
+                # Read complete data to create a snapshot
                 try:
                     client.get_issue_raw(issue_id, include=['journals', 'attachments'])
                 except Exception:
                     pass
                 continue
 
-            # 快速比對：updated_on 是否相同
+            # Quick comparison: whether updated_on is the same
             current_updated = issue.updated_on
             if current_updated == snapshot.get('updated_on'):
                 unchanged_count += 1
                 continue
 
-            # 有變更，收集摘要
+            # There are changes, collect summary
             change_summary = []
             current_status = issue.status.get('name')
             if current_status != snapshot['status']:
-                change_summary.append(f"狀態: {snapshot['status']} → {current_status}")
+                change_summary.append(f"Status: {snapshot['status']} → {current_status}")
             if issue.done_ratio != snapshot['done_ratio']:
-                change_summary.append(f"完成度: {snapshot['done_ratio']}% → {issue.done_ratio}%")
+                change_summary.append(f"Done ratio: {snapshot['done_ratio']}% → {issue.done_ratio}%")
 
             current_assigned = issue.assigned_to.get('name') if issue.assigned_to else None
             if current_assigned != snapshot['assigned_to']:
-                change_summary.append(f"指派: {snapshot['assigned_to'] or '未指派'} → {current_assigned or '未指派'}")
+                change_summary.append(f"Assignment: {snapshot['assigned_to'] or 'Not assigned'} → {current_assigned or 'Not assigned'}")
 
             if not change_summary:
-                change_summary.append("內容已更新（詳情請使用 check_issue_changes）")
+                change_summary.append("Content has been updated (please use check_issue_changes for details)")
 
             changed_issues.append((issue, change_summary))
 
-            # 更新快照
+            # Update snapshot
             try:
                 client.get_issue_raw(issue_id, include=['journals', 'attachments'])
             except Exception:
                 pass
 
-        # 組裝輸出
-        result = f"我的議題同步摘要{project_hint}（共 {len(issues)} 個）\n"
+        # Assembly output
+        result = f"My issue sync summary{project_hint}(common {len(issues)} )\n"
         result += "=" * 50 + "\n"
 
         if changed_issues:
-            result += f"\n有變更的議題（{len(changed_issues)} 個）:\n"
+            result += f"\n Topics with changes ({len(changed_issues)} ):\n"
             for issue, summaries in changed_issues:
                 title = issue.subject[:40] + '...' if len(issue.subject) > 40 else issue.subject
                 result += f"\n  #{issue.id} {title}\n"
@@ -1623,47 +1623,47 @@ def sync_my_issues(project_id: int = None, status_filter: str = "open", limit: i
                     result += f"    - {s}\n"
 
         if new_issues:
-            result += f"\n首次讀取的議題（{len(new_issues)} 個）:\n"
+            result += f"\nThe issue read for the first time ({len(new_issues)} ):\n"
             for issue in new_issues:
                 title = issue.subject[:40] + '...' if len(issue.subject) > 40 else issue.subject
                 status = issue.status.get('name', 'N/A')
                 result += f"  #{issue.id} [{status}] {title}\n"
 
         if unchanged_count > 0:
-            result += f"\n無變更: {unchanged_count} 個議題"
+            result += f"\n No changes: {unchanged_count} topics"
 
         return result
 
     except RedmineAPIError as e:
-        return f"同步失敗: {str(e)}"
+        return f"Sync failed: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
 def sync_project_issues(project_id: int, status_filter: str = "open") -> str:
     """
-    同步專案議題結構並偵測變更
+    Synchronize project issue structure and detect changes
 
-    取得指定專案的所有議題（自動分頁），以樹狀結構呈現父子階層關係，
-    並與本地快照比對標示變更狀態。可重複執行以持續追蹤專案動態。
+    Obtain all issues of the specified project (automatic paging) and present the parent-child hierarchical relationship in a tree structure.
+    And compare it with the local snapshot to indicate the change status. Can be executed repeatedly to continuously track project progress.
 
     Args:
-        project_id: 專案 ID（必要）
-        status_filter: 狀態篩選 ("open", "closed", "all")，預設 "open"
+        project_id: project ID (required)
+        status_filter: status filter ("open", "closed", "all"), default "open"
 
     Returns:
-        專案議題的樹狀結構與變更摘要
+        Project topic tree structure and change summary
     """
     try:
         client = get_client()
 
-        # 分頁取得專案所有議題
+        # Get all project issues in pages
         status_map = {'open': 'o', 'closed': 'c', 'all': '*', 'o': 'o', 'c': 'c', '*': '*'}
         status_param = status_map.get(status_filter, 'o')
         issues = []
         offset = 0
-        page_size = 100  # Redmine API 單次上限
+        page_size = 100  # Redmine API single limit
 
         while True:
             batch = client.list_issues(
@@ -1681,9 +1681,9 @@ def sync_project_issues(project_id: int, status_filter: str = "open") -> str:
             offset += page_size
 
         if not issues:
-            return f"專案 #{project_id} 沒有符合條件的議題（篩選: {status_filter}）"
+            return f"project #{project_id} There are no matching issues (filter: {status_filter}）"
 
-        # 分類議題：有變更 / 首次讀取 / 無變更
+        # Classification Topics: Changed / Read for the first time / No changes
         changed_issues = []
         new_issues = []
         unchanged_issues = []
@@ -1694,46 +1694,46 @@ def sync_project_issues(project_id: int, status_filter: str = "open") -> str:
 
             if not snapshot:
                 new_issues.append(issue)
-                # 建立快照
+                # Create a snapshot
                 try:
                     client.get_issue_raw(issue_id, include=['journals', 'attachments'])
                 except Exception:
                     pass
                 continue
 
-            # 快速比對 updated_on
+            # Quick comparison updated_on
             if issue.updated_on == snapshot.get('updated_on'):
                 unchanged_issues.append(issue)
                 continue
 
-            # 偵測具體變更
+            # Detect specific changes
             change_summary = []
             current_status = issue.status.get('name')
             if current_status != snapshot['status']:
-                change_summary.append(f"狀態: {snapshot['status']} → {current_status}")
+                change_summary.append(f"Status: {snapshot['status']} → {current_status}")
             if issue.done_ratio != snapshot['done_ratio']:
-                change_summary.append(f"完成度: {snapshot['done_ratio']}% → {issue.done_ratio}%")
+                change_summary.append(f"Done ratio: {snapshot['done_ratio']}% → {issue.done_ratio}%")
             current_assigned = issue.assigned_to.get('name') if issue.assigned_to else None
             if current_assigned != snapshot['assigned_to']:
-                change_summary.append(f"指派: {snapshot['assigned_to'] or '未指派'} → {current_assigned or '未指派'}")
+                change_summary.append(f"Assignment: {snapshot['assigned_to'] or 'Not assigned'} → {current_assigned or 'Not assigned'}")
             current_priority = issue.priority.get('name')
             if current_priority != snapshot['priority']:
-                change_summary.append(f"優先級: {snapshot['priority']} → {current_priority}")
+                change_summary.append(f"Priority: {snapshot['priority']} → {current_priority}")
             if issue.subject != snapshot['subject']:
-                change_summary.append(f"標題已變更")
+                change_summary.append(f"Title changed")
 
             if not change_summary:
-                change_summary.append("內容已更新（詳情請使用 check_issue_changes）")
+                change_summary.append("Content has been updated (please use check_issue_changes for details)")
 
             changed_issues.append((issue, change_summary))
 
-            # 更新快照
+            # Update snapshot
             try:
                 client.get_issue_raw(issue_id, include=['journals', 'attachments'])
             except Exception:
                 pass
 
-        # 建立父子關係索引
+        # Create a parent-child relationship index
         all_issues = {issue.id: issue for issue in issues}
         children_map = {}  # parent_id -> [child_issues]
         root_issues = []
@@ -1745,7 +1745,7 @@ def sync_project_issues(project_id: int, status_filter: str = "open") -> str:
             else:
                 root_issues.append(issue)
 
-        # 變更狀態查詢表
+        # Change status query form
         changed_ids = {issue.id for issue, _ in changed_issues}
         new_ids = {issue.id for issue in new_issues}
         change_details = {issue.id: summaries for issue, summaries in changed_issues}
@@ -1761,7 +1761,7 @@ def sync_project_issues(project_id: int, status_filter: str = "open") -> str:
             marker = get_marker(issue.id)
             tracker = issue.tracker.get('name', '') if hasattr(issue, 'tracker') and issue.tracker else ''
             status = issue.status.get('name', '') if issue.status else ''
-            assigned = issue.assigned_to.get('name', '未指派') if issue.assigned_to else '未指派'
+            assigned = issue.assigned_to.get('name', 'Not assigned') if issue.assigned_to else 'Not assigned'
             done = issue.done_ratio if hasattr(issue, 'done_ratio') else 0
             title = issue.subject[:50] + '...' if len(issue.subject) > 50 else issue.subject
             return f"{prefix}{marker} #{issue.id} [{tracker}][{status}] {title} ({assigned}, {done}%)"
@@ -1771,7 +1771,7 @@ def sync_project_issues(project_id: int, status_filter: str = "open") -> str:
             connector = "└── " if is_last else "├── "
             lines.append(format_issue_line(issue, prefix + connector if prefix else ""))
 
-            # 變更詳情
+            # Change details
             if issue.id in change_details:
                 detail_prefix = prefix + ("    " if is_last else "│   ") if prefix else "    "
                 for s in change_details[issue.id]:
@@ -1784,28 +1784,28 @@ def sync_project_issues(project_id: int, status_filter: str = "open") -> str:
                 lines.extend(build_tree(child, child_prefix, is_child_last))
             return lines
 
-        # 取得專案名稱
+        # Get project name
         project_name = ""
         if issues:
             project_name = issues[0].project.get('name', '') if hasattr(issues[0], 'project') and issues[0].project else ''
 
-        # 組裝輸出
-        result = f"# 專案議題同步: {project_name} (#{project_id})\n"
-        result += f"篩選: {status_filter} | 共 {len(issues)} 個議題\n"
-        result += f"🔄 有變更: {len(changed_issues)} | 🆕 首次讀取: {len(new_issues)} | ✅ 無變更: {len(unchanged_issues)}\n"
+        # Assembly output
+        result = f"# Project topic synchronization: {project_name} (#{project_id})\n"
+        result += f"filter: {status_filter} | Total {len(issues)} Topics\n"
+        result += f"🔄 There are changes: {len(changed_issues)} | 🆕 First read: {len(new_issues)} | ✅ No changes: {len(unchanged_issues)}\n"
         result += "=" * 60 + "\n\n"
 
-        # 樹狀結構
-        result += "## 議題結構\n\n"
+        # tree structure
+        result += "## Issue structure\n\n"
         for i, issue in enumerate(root_issues):
             is_last = (i == len(root_issues) - 1)
             tree_lines = build_tree(issue, "", is_last)
             result += "\n".join(tree_lines) + "\n"
 
-        # 變更摘要
+        # Summary of changes
         if changed_issues:
-            result += f"\n## 變更摘要（{len(changed_issues)} 個）\n\n"
-            result += "| 議題 | 種類 | 變更內容 |\n"
+            result += f"\n## Summary of changes ({len(changed_issues)} )\n\n"
+            result += "| Topic | Category | Change content |\n"
             result += "|------|------|----------|\n"
             for issue, summaries in changed_issues:
                 tracker = issue.tracker.get('name', '') if hasattr(issue, 'tracker') and issue.tracker else ''
@@ -1816,26 +1816,26 @@ def sync_project_issues(project_id: int, status_filter: str = "open") -> str:
         return result
 
     except RedmineAPIError as e:
-        return f"同步專案議題失敗: {str(e)}"
+        return f"Failed to synchronize project issues: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
 def search_users(query: str, limit: int = 10) -> str:
     """
-    搜尋用戶（依姓名或登入名）
+    Search for users (by name or login name)
     
     Args:
-        query: 搜尋關鍵字（姓名或登入名）
-        limit: 最大回傳數量 (預設 10，最大 50)
+        query: search keyword (name or login name)
+        limit: maximum number of return requests (default 10, maximum 50)
     
     Returns:
-        符合搜尋條件的用戶列表
+        List of users matching search criteria
     """
     try:
         if not query.strip():
-            return "請提供搜尋關鍵字"
+            return "Please provide search keywords"
         
         client = get_client()
         limit = min(max(limit, 1), 50)
@@ -1843,44 +1843,44 @@ def search_users(query: str, limit: int = 10) -> str:
         users = client.search_users(query, limit)
         
         if not users:
-            return f"沒有找到匹配「{query}」的用戶"
+            return f"No users found matching '{query}'"
         
-        result = f"搜尋關鍵字: '{query}'\n找到 {len(users)} 個相關用戶:\n\n"
-        result += f"{'ID':<5} {'登入名':<15} {'姓名':<20} {'狀態':<8}\n"
+        result = f"Search keyword: '{query}'\n found {len(users)} related users:\n\n"
+        result += f"{'ID':<5} {'Login name':<15} {'Name':<20} {'state':<8}\n"
         result += f"{'-'*5} {'-'*15} {'-'*20} {'-'*8}\n"
         
         for user in users:
             full_name = f"{user.firstname} {user.lastname}".strip()
             if not full_name:
                 full_name = user.login
-            status_text = "啟用" if user.status == 1 else "停用"
+            status_text = "enable" if user.status == 1 else "deactivate"
             result += f"{user.id:<5} {user.login:<15} {full_name:<20} {status_text:<8}\n"
         
         return result
         
     except RedmineAPIError as e:
-        return f"搜尋用戶失敗: {str(e)}"
+        return f"Failed to search for user: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
 def list_users(limit: int = 20, status_filter: str = "active") -> str:
     """
-    列出所有用戶
+    List all users
     
     Args:
-        limit: 最大回傳數量 (預設 20，最大 100)
-        status_filter: 狀態篩選 ("active", "locked", "all")
+        limit: maximum number of return requests (default 20, maximum 100)
+        status_filter: status filter ("active", "locked", "all")
     
     Returns:
-        用戶列表，以表格格式呈現
+        List of users, presented in table format
     """
     try:
         client = get_client()
         limit = min(max(limit, 1), 100)
         
-        # 轉換狀態篩選
+        # Transition status filter
         status = None
         if status_filter == "active":
             status = 1
@@ -1890,63 +1890,63 @@ def list_users(limit: int = 20, status_filter: str = "active") -> str:
         users = client.list_users(limit=limit, status=status)
         
         if not users:
-            return "沒有找到用戶"
+            return "User not found"
         
-        result = f"找到 {len(users)} 個用戶:\n\n"
-        result += f"{'ID':<5} {'登入名':<15} {'姓名':<20} {'Email':<25} {'狀態':<8}\n"
+        result = f"Found {len(users)} users:\n\n"
+        result += f"{'ID':<5} {'Login name':<15} {'Name':<20} {'Email':<25} {'state':<8}\n"
         result += f"{'-'*5} {'-'*15} {'-'*20} {'-'*25} {'-'*8}\n"
         
         for user in users:
             full_name = f"{user.firstname} {user.lastname}".strip()
             if not full_name:
                 full_name = user.login
-            status_text = "啟用" if user.status == 1 else "停用"
+            status_text = "enable" if user.status == 1 else "deactivate"
             email = user.mail[:22] + "..." if len(user.mail) > 25 else user.mail
             result += f"{user.id:<5} {user.login:<15} {full_name:<20} {email:<25} {status_text:<8}\n"
         
         return result
         
     except RedmineAPIError as e:
-        return f"取得用戶列表失敗: {str(e)}"
+        return f"Failed to get user list: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
 def get_user(user_id: int) -> str:
     """
-    取得特定用戶的詳細資訊
+    Get details about a specific user
     
     Args:
-        user_id: 用戶 ID
+        user_id: user ID
         
     Returns:
-        用戶的詳細資訊，以易讀格式呈現
+        User details, presented in an easy-to-read format
     """
     try:
         client = get_client()
         user_data = client.get_user(user_id)
         
-        # 格式化用戶資訊
-        result = f"用戶 #{user_id}: {user_data.get('firstname', '')} {user_data.get('lastname', '')}\n\n"
-        result += "基本資訊:\n"
-        result += f"- 登入名: {user_data.get('login', 'N/A')}\n"
+        # Format user information
+        result = f"User #{user_id}: {user_data.get('firstname', '')} {user_data.get('lastname', '')}\n\n"
+        result += "Basic information:\n"
+        result += f"- Login name: {user_data.get('login', 'N/A')}\n"
         result += f"- Email: {user_data.get('mail', 'N/A')}\n"
-        result += f"- 狀態: {'啟用' if user_data.get('status', 1) == 1 else '停用'}\n"
-        result += f"- 建立時間: {user_data.get('created_on', 'N/A')}\n"
+        result += f"- Status: {'Active' if user_data.get('status', 1) == 1 else 'Inactive'}\n"
+        result += f"- Creation time: {user_data.get('created_on', 'N/A')}\n"
         
         if user_data.get('last_login_on'):
-            result += f"- 最後登入: {user_data.get('last_login_on')}\n"
+            result += f"- Last login: {user_data.get('last_login_on')}\n"
         
-        # 群組資訊
+        # Group information
         if user_data.get('groups'):
-            result += "\n群組:\n"
+            result += "\nGroup:\n"
             for group in user_data['groups']:
                 result += f"- {group.get('name', 'N/A')}\n"
         
-        # 自訂欄位
+        # Custom fields
         if user_data.get('custom_fields'):
-            result += "\n自訂欄位:\n"
+            result += "\nCustom field:\n"
             for field in user_data['custom_fields']:
                 if field.get('value'):
                     result += f"- {field.get('name', 'N/A')}: {field.get('value', 'N/A')}\n"
@@ -1954,108 +1954,108 @@ def get_user(user_id: int) -> str:
         return result
         
     except RedmineAPIError as e:
-        return f"取得用戶資訊失敗: {str(e)}"
+        return f"Failed to obtain user information: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
 def add_watcher(issue_id: int, user_id: int = None, user_name: str = None, user_login: str = None) -> str:
     """
-    新增議題觀察者
+    Add topic observer
 
     Args:
-        issue_id: 議題 ID
-        user_id: 用戶 ID（與 user_name/user_login 三選一）
-        user_name: 用戶姓名（與 user_id/user_login 三選一）
-        user_login: 用戶登入名（與 user_id/user_name 三選一）
+        issue_id: Issue ID
+        user_id: user ID (choose one from user_name/user_login)
+        user_name: user name (choose one from user_id/user_login)
+        user_login: user login name (choose one from user_id/user_name)
 
     Returns:
-        操作結果訊息
+        Operation result message
     """
     try:
         client = get_client()
 
-        # 解析用戶 ID
+        # Parse user ID
         final_user_id = user_id
         if user_name:
             final_user_id = client.find_user_id_by_name(user_name)
             if not final_user_id:
                 users = client.get_available_users()
-                return f"找不到用戶姓名：「{user_name}」\n\n可用用戶：\n" + "\n".join([f"- {name}" for name in users['by_name'].keys()])
+                return f'Username not found: "{user_name}"\n\nAvailable users: \n' + "\n".join([f"- {name}" for name in users['by_name'].keys()])
         elif user_login:
             final_user_id = client.find_user_id_by_login(user_login)
             if not final_user_id:
                 users = client.get_available_users()
-                return f"找不到用戶登入名：「{user_login}」\n\n可用用戶：\n" + "\n".join([f"- {login}" for login in users['by_login'].keys()])
+                return f'User login name not found: "{user_login}"\n\nAvailable users: \n' + "\n".join([f"- {login}" for login in users['by_login'].keys()])
 
         if not final_user_id:
-            return "錯誤: 請提供 user_id、user_name 或 user_login"
+            return "Error: Please provide user_id, user_name or user_login"
 
         client.add_watcher(issue_id, final_user_id)
-        return f"已將用戶 (ID: {final_user_id}) 加入議題 #{issue_id} 的觀察者"
+        return f"User (ID: {final_user_id}) Add to issue #{issue_id} observer"
 
     except RedmineAPIError as e:
-        return f"新增觀察者失敗: {str(e)}"
+        return f"Failed to add observer: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
 def remove_watcher(issue_id: int, user_id: int = None, user_name: str = None, user_login: str = None) -> str:
     """
-    移除議題觀察者
+    Remove issue observer
 
     Args:
-        issue_id: 議題 ID
-        user_id: 用戶 ID（與 user_name/user_login 三選一）
-        user_name: 用戶姓名（與 user_id/user_login 三選一）
-        user_login: 用戶登入名（與 user_id/user_name 三選一）
+        issue_id: Issue ID
+        user_id: user ID (choose one from user_name/user_login)
+        user_name: user name (choose one from user_id/user_login)
+        user_login: user login name (choose one from user_id/user_name)
 
     Returns:
-        操作結果訊息
+        Operation result message
     """
     try:
         client = get_client()
 
-        # 解析用戶 ID
+        # Parse user ID
         final_user_id = user_id
         if user_name:
             final_user_id = client.find_user_id_by_name(user_name)
             if not final_user_id:
                 users = client.get_available_users()
-                return f"找不到用戶姓名：「{user_name}」\n\n可用用戶：\n" + "\n".join([f"- {name}" for name in users['by_name'].keys()])
+                return f'Username not found: "{user_name}"\n\nAvailable users: \n' + "\n".join([f"- {name}" for name in users['by_name'].keys()])
         elif user_login:
             final_user_id = client.find_user_id_by_login(user_login)
             if not final_user_id:
                 users = client.get_available_users()
-                return f"找不到用戶登入名：「{user_login}」\n\n可用用戶：\n" + "\n".join([f"- {login}" for login in users['by_login'].keys()])
+                return f'User login name not found: "{user_login}"\n\nAvailable users: \n' + "\n".join([f"- {login}" for login in users['by_login'].keys()])
 
         if not final_user_id:
-            return "錯誤: 請提供 user_id、user_name 或 user_login"
+            return "Error: Please provide user_id, user_name or user_login"
 
         client.remove_watcher(issue_id, final_user_id)
-        return f"已將用戶 (ID: {final_user_id}) 從議題 #{issue_id} 的觀察者中移除"
+        return f"User (ID: {final_user_id}) from issue #{issue_id} removed from observers"
 
     except RedmineAPIError as e:
-        return f"移除觀察者失敗: {str(e)}"
+        return f"Failed to remove observer: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
 def refresh_cache() -> str:
     """
-    手動刷新列舉值和用戶快取
+    Manually refresh enumeration values and user cache
     
     Returns:
-        刷新結果訊息
+        Refresh result message
     """
     try:
         client = get_client()
         client.refresh_cache()
         
-        # 取得快取資訊
+        # Get cache information
         cache = client._load_enum_cache()
         domain = cache.get('domain', 'N/A')
         cache_time = cache.get('cache_time', 0)
@@ -2065,58 +2065,58 @@ def refresh_cache() -> str:
         else:
             cache_datetime = 'N/A'
         
-        result = f"""快取刷新成功!
+        result = f"""Cache refreshed successfully!
 
 Domain: {domain}
-快取時間: {cache_datetime}
+Cache time: {cache_datetime}
 
-快取內容統計:
-- 優先權: {len(cache.get('priorities', {}))} 個
-- 狀態: {len(cache.get('statuses', {}))} 個  
-- 追蹤器: {len(cache.get('trackers', {}))} 個
-- 用戶（姓名）: {len(cache.get('users_by_name', {}))} 個
-- 用戶（登入名）: {len(cache.get('users_by_login', {}))} 個
+Cache content statistics:
+- Priority: {len(cache.get('priorities', {}))} a
+- Status: {len(cache.get('statuses', {}))} a
+- Tracker: {len(cache.get('trackers', {}))} a
+- User (name): {len(cache.get('users_by_name', {}))} a
+- User (login name): {len(cache.get('users_by_login', {}))} a
 
-快取位置: {client._cache_file}"""
+Cache location: {client._cache_file}"""
         
         return result
         
     except RedmineAPIError as e:
-        return f"刷新快取失敗: {str(e)}"
+        return f"Failed to refresh cache: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
 def list_issue_journals(issue_id: int, include_property_changes: bool = False) -> str:
     """
-    列出議題的所有備註/日誌記錄
+    List all notes/log records for the issue
     
     Args:
-        issue_id: 議題 ID
-        include_property_changes: 是否包含屬性變更記錄（預設否，僅顯示有備註內容的記錄）
+        issue_id: Issue ID
+        include_property_changes: Whether to include property change records (default is no, only records with remarks will be displayed)
     
     Returns:
-        議題備註列表，包含 Journal ID、作者、時間、內容
+        List of topic notes, including Journal ID, author, time, and content
     """
     try:
         client = get_client()
         journals = client.get_issue_journals(issue_id)
         
         if not journals:
-            return f"議題 #{issue_id} 沒有任何備註記錄"
+            return f"Issue #{issue_id} No notes recorded"
         
-        # 根據參數過濾
+        # Filter based on parameters
         if not include_property_changes:
-            # 只顯示有備註內容的記錄
+            # Only show records with comments
             filtered_journals = [j for j in journals if j.get('notes', '').strip()]
         else:
             filtered_journals = journals
         
         if not filtered_journals:
-            return f"議題 #{issue_id} 沒有符合條件的備註記錄（共 {len(journals)} 筆屬性變更記錄）"
+            return f"Issue #{issue_id} There are no qualified remark records (total {len(journals)} Pen attribute change record)"
         
-        result = f"議題 #{issue_id} 的備註記錄（共 {len(filtered_journals)} 筆）:\n"
+        result = f"Issue #{issue_id} Note records (total {len(filtered_journals)} Pen):\n"
         result += "=" * 50 + "\n\n"
         
         for journal in filtered_journals:
@@ -2128,23 +2128,23 @@ def list_issue_journals(issue_id: int, include_property_changes: bool = False) -
             details = journal.get('details', [])
             
             result += f"📝 Journal #{journal_id}\n"
-            result += f"   作者: {author}\n"
-            result += f"   時間: {created_on}\n"
+            result += f"   author: {author}\n"
+            result += f"   time: {created_on}\n"
             if private_notes:
-                result += f"   🔒 私有備註\n"
+                result += f"   🔒 Private Note\n"
             
             if notes:
-                result += f"   備註內容:\n"
-                # 縮排備註內容
+                result += f"   Remarks:\n"
+                # Indent content of remarks
                 for line in notes.split('\n'):
                     result += f"      {line}\n"
             
             if include_property_changes and details:
-                result += f"   屬性變更 ({len(details)} 項):\n"
+                result += f"   Property changes ({len(details)} Item):\n"
                 for detail in details:
                     prop_name = detail.get('name', 'N/A')
-                    old_value = detail.get('old_value', '(空)')
-                    new_value = detail.get('new_value', '(空)')
+                    old_value = detail.get('old_value', '(null)')
+                    new_value = detail.get('new_value', '(null)')
                     result += f"      - {prop_name}: {old_value} → {new_value}\n"
             
             result += "\n"
@@ -2152,28 +2152,28 @@ def list_issue_journals(issue_id: int, include_property_changes: bool = False) -
         return result.strip()
         
     except RedmineAPIError as e:
-        return f"取得議題備註失敗: {str(e)}"
+        return f"Failed to obtain issue notes: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 @mcp.tool()
 def get_journal(issue_id: int, journal_id: int) -> str:
     """
-    取得議題中特定備註的詳細資訊
+    Get details about specific comments in an issue
     
     Args:
-        issue_id: 議題 ID
-        journal_id: 備註 ID (Journal ID)
+        issue_id: Issue ID
+        journal_id: Note ID (Journal ID)
     
     Returns:
-        備註的詳細資訊，包含作者、時間、內容、屬性變更等
+        Detailed information of the note, including author, time, content, attribute changes, etc.
     """
     try:
         client = get_client()
         journals = client.get_issue_journals(issue_id)
         
-        # 找到指定的 journal
+        # Find the specified journal
         target_journal = None
         for journal in journals:
             if journal.get('id') == journal_id:
@@ -2181,7 +2181,7 @@ def get_journal(issue_id: int, journal_id: int) -> str:
                 break
         
         if not target_journal:
-            return f"找不到備註: 議題 #{issue_id} 中沒有 Journal #{journal_id}"
+            return f"Note not found: Issue #{issue_id} There is no Journal # in{journal_id}"
         
         journal_id = target_journal.get('id', 'N/A')
         author = target_journal.get('user', {}).get('name', 'N/A')
@@ -2191,46 +2191,46 @@ def get_journal(issue_id: int, journal_id: int) -> str:
         private_notes = target_journal.get('private_notes', False)
         details = target_journal.get('details', [])
         
-        result = f"📝 Journal #{journal_id} 詳細資訊\n"
+        result = f"📝 Journal #{journal_id} Details\n"
         result += "=" * 50 + "\n\n"
-        result += f"議題: #{issue_id}\n"
-        result += f"作者: {author} (ID: {author_id})\n"
-        result += f"建立時間: {created_on}\n"
+        result += f"Issue: #{issue_id}\n"
+        result += f"author: {author} (ID: {author_id})\n"
+        result += f"Creation time: {created_on}\n"
         if private_notes:
-            result += f"🔒 這是私有備註\n"
+            result += f"🔒 This is a private note\n"
         
-        result += "\n--- 備註內容 ---\n"
+        result += "\n--- Remarks ---\n"
         if notes:
             result += notes + "\n"
         else:
-            result += "(無文字備註)\n"
+            result += "(No text remarks)\n"
         
         if details:
-            result += f"\n--- 屬性變更 ({len(details)} 項) ---\n"
+            result += f"\n---Attribute changes ({len(details)} item) ---\n"
             for detail in details:
                 prop_name = detail.get('name', 'N/A')
                 property_type = detail.get('property', 'N/A')
-                old_value = detail.get('old_value', '(空)')
-                new_value = detail.get('new_value', '(空)')
+                old_value = detail.get('old_value', '(null)')
+                new_value = detail.get('new_value', '(null)')
                 result += f"• {prop_name} ({property_type})\n"
-                result += f"  舊值: {old_value}\n"
-                result += f"  新值: {new_value}\n"
+                result += f"  Old value: {old_value}\n"
+                result += f"  New value: {new_value}\n"
         
         return result.strip()
         
     except RedmineAPIError as e:
-        return f"取得備註失敗: {str(e)}"
+        return f"Failed to get notes: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
-# 附件處理相關常數
+# Attachment processing related constants
 MAX_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024  # 10MB
-MAX_TEXT_OUTPUT_LENGTH = 50000  # 文字輸出最大字元數
-DEFAULT_THUMBNAIL_SIZE = 800  # 預設縮圖最大邊長
+MAX_TEXT_OUTPUT_LENGTH = 50000  # Maximum number of characters for text output
+DEFAULT_THUMBNAIL_SIZE = 800  # Default maximum side length of thumbnails
 SUPPORTED_IMAGE_TYPES = {'image/png', 'image/jpeg', 'image/gif', 'image/webp'}
 
-# 明確支援的文字 MIME 類型
+# Explicitly supported text MIME types
 TEXT_MIME_TYPES = {
     'text/plain', 'text/html', 'text/css', 'text/csv',
     'text/xml', 'text/javascript', 'text/markdown',
@@ -2239,7 +2239,7 @@ TEXT_MIME_TYPES = {
     'application/x-sh', 'application/sql',
 }
 
-# 副檔名對應的文件類型（用於 content_type 不準確時的備援判斷）
+# The file type corresponding to the file extension (used for backup judgment when content_type is inaccurate)
 TEXT_EXTENSIONS = {
     '.txt', '.csv', '.json', '.xml', '.yaml', '.yml',
     '.html', '.htm', '.css', '.js', '.ts', '.md',
@@ -2255,7 +2255,7 @@ OFFICE_EXTENSIONS = {
     '.pptx': 'pptx',
 }
 
-# 舊版 Office 格式（不支援直接解析）
+# Old Office formats (direct parsing is not supported)
 LEGACY_OFFICE_EXTENSIONS = {'.doc', '.xls', '.ppt'}
 
 
@@ -2266,15 +2266,15 @@ def get_attachment_image(
     max_size: int = DEFAULT_THUMBNAIL_SIZE
 ):
     """
-    下載 Redmine 附件圖片，供 AI 視覺分析
+    Download the Redmine attachment image for AI visual analysis
     
     Args:
-        attachment_id: 附件 ID
-        thumbnail: 是否生成縮圖以減少 token 消耗（預設 True）
-        max_size: 縮圖最大邊長（預設 800 像素，僅在 thumbnail=True 時生效）
+        attachment_id: attachment ID
+        thumbnail: whether to generate thumbnails to reduce token consumption (default True)
+        max_size: Maximum side length of thumbnail (default 800 pixels, only effective when thumbnail=True)
     
     Returns:
-        圖片內容（供 AI 視覺解析）或錯誤訊息
+        Image content (for AI visual interpretation) or error message
     """
     try:
         from io import BytesIO
@@ -2282,32 +2282,32 @@ def get_attachment_image(
         
         client = get_client()
         
-        # 下載附件
+        # Download attachment
         image_data, attachment_info = client.download_attachment(attachment_id)
         
         filename = attachment_info.get('filename', 'unknown')
         content_type = attachment_info.get('content_type', '')
         filesize = attachment_info.get('filesize', 0)
         
-        # 檢查是否為圖片類型
+        # Check if it is an image type
         if content_type not in SUPPORTED_IMAGE_TYPES:
-            return f"附件 #{attachment_id} ({filename}) 不是支援的圖片格式\n" \
-                   f"類型: {content_type}\n" \
-                   f"支援格式: {', '.join(SUPPORTED_IMAGE_TYPES)}"
+            return f"appendix #{attachment_id} ({filename}) is not a supported image format\n" \
+                   f"type: {content_type}\n" \
+                   f"Supported formats: {', '.join(SUPPORTED_IMAGE_TYPES)}"
         
-        # 檢查檔案大小
+        # Check file size
         if filesize > MAX_ATTACHMENT_SIZE_BYTES:
-            return f"附件 #{attachment_id} ({filename}) 檔案過大\n" \
-                   f"大小: {filesize / 1024 / 1024:.2f} MB\n" \
-                   f"限制: {MAX_ATTACHMENT_SIZE_BYTES / 1024 / 1024:.0f} MB"
+            return f"appendix #{attachment_id} ({filename}) file too large\n" \
+                   f"size: {filesize / 1024 / 1024:.2f} MB\n" \
+                   f"limit: {MAX_ATTACHMENT_SIZE_BYTES / 1024 / 1024:.0f} MB"
         
-        # 處理圖片
+        # Process pictures
         img = PILImage.open(BytesIO(image_data))
         original_size = img.size
         
-        # 轉換模式（處理 RGBA、P 等模式）
+        # Conversion modes (handling RGBA, P, etc. modes)
         if img.mode in ('RGBA', 'P'):
-            # 建立白色背景
+            # Create a white background
             background = PILImage.new('RGB', img.size, (255, 255, 255))
             if img.mode == 'P':
                 img = img.convert('RGBA')
@@ -2316,24 +2316,24 @@ def get_attachment_image(
         elif img.mode != 'RGB':
             img = img.convert('RGB')
         
-        # 縮圖處理
+        # Thumbnail processing
         if thumbnail and (img.width > max_size or img.height > max_size):
             img.thumbnail((max_size, max_size), PILImage.Resampling.LANCZOS)
             resized = True
         else:
             resized = False
         
-        # 輸出為 JPEG（較小的檔案大小）
+        # Output as JPEG (smaller file size)
         output_buffer = BytesIO()
         img.save(output_buffer, format='JPEG', quality=85, optimize=True)
         output_data = output_buffer.getvalue()
         
-        # 記錄處理資訊（透過 logging）
+        # Logging processing information (via logging)
         import logging
         logger = logging.getLogger(__name__)
         if resized:
             logger.info(
-                f"圖片 #{attachment_id} ({filename}): "
+                f"picture #{attachment_id} ({filename}): "
                 f"{original_size[0]}x{original_size[1]} → {img.size[0]}x{img.size[1]}, "
                 f"{len(image_data)} → {len(output_data)} bytes"
             )
@@ -2341,18 +2341,18 @@ def get_attachment_image(
         return Image(data=output_data, format="jpeg")
         
     except RedmineAPIError as e:
-        return f"取得附件圖片失敗: {str(e)}"
+        return f"Failed to obtain attached image: {str(e)}"
     except Exception as e:
-        return f"處理圖片錯誤: {str(e)}"
+        return f"Handling image errors: {str(e)}"
 
 
 def _get_file_extension(filename: str) -> str:
-    """取得檔案副檔名（小寫）"""
+    """Get the file extension (lowercase)"""
     return os.path.splitext(filename)[1].lower()
 
 
 def _extract_pdf_text(data: bytes) -> str:
-    """從 PDF 提取文字"""
+    """Extract text from PDF"""
     from io import BytesIO
     from pypdf import PdfReader
 
@@ -2361,15 +2361,15 @@ def _extract_pdf_text(data: bytes) -> str:
     for i, page in enumerate(reader.pages):
         text = page.extract_text()
         if text and text.strip():
-            pages.append(f"--- 第 {i + 1} 頁 ---\n{text.strip()}")
+            pages.append(f"--- No. {i + 1} Page ---\n{text.strip()}")
 
     if not pages:
-        return "(PDF 無法提取文字內容，可能為掃描圖片型 PDF)"
+        return "(PDF cannot extract text content, it may be a scanned image PDF)"
     return "\n\n".join(pages)
 
 
 def _extract_docx_text(data: bytes) -> str:
-    """從 Word (.docx) 提取文字"""
+    """Extract text from Word (.docx)"""
     from io import BytesIO
     from docx import Document
 
@@ -2379,22 +2379,22 @@ def _extract_docx_text(data: bytes) -> str:
         if para.text.strip():
             paragraphs.append(para.text)
 
-    # 也提取表格內容
+    # Also extract table content
     for table in doc.tables:
         rows = []
         for row in table.rows:
             cells = [cell.text.strip() for cell in row.cells]
             rows.append(" | ".join(cells))
         if rows:
-            paragraphs.append("\n[表格]\n" + "\n".join(rows))
+            paragraphs.append("\n[Form]\n" + "\n".join(rows))
 
     if not paragraphs:
-        return "(Word 文件無文字內容)"
+        return "(Word file has no text content)"
     return "\n\n".join(paragraphs)
 
 
 def _extract_xlsx_text(data: bytes) -> str:
-    """從 Excel (.xlsx) 提取表格文字"""
+    """Extract table text from Excel (.xlsx)"""
     from io import BytesIO
     from openpyxl import load_workbook
 
@@ -2409,16 +2409,16 @@ def _extract_xlsx_text(data: bytes) -> str:
             if any(c for c in cells):
                 rows.append(" | ".join(cells))
         if rows:
-            sheets.append(f"--- 工作表: {sheet_name} ---\n" + "\n".join(rows))
+            sheets.append(f"--- Worksheet: {sheet_name} ---\n" + "\n".join(rows))
 
     wb.close()
     if not sheets:
-        return "(Excel 檔案無內容)"
+        return "(Excel file has no content)"
     return "\n\n".join(sheets)
 
 
 def _extract_pptx_text(data: bytes) -> str:
-    """從 PowerPoint (.pptx) 提取文字"""
+    """Extract text from PowerPoint (.pptx)"""
     from io import BytesIO
     from pptx import Presentation
 
@@ -2437,19 +2437,19 @@ def _extract_pptx_text(data: bytes) -> str:
                     cells = [cell.text.strip() for cell in row.cells]
                     texts.append(" | ".join(cells))
         if texts:
-            slides.append(f"--- 投影片 {i + 1} ---\n" + "\n".join(texts))
+            slides.append(f"--- Slides {i + 1} ---\n" + "\n".join(texts))
 
     if not slides:
-        return "(簡報無文字內容)"
+        return "(Presentation has no text content)"
     return "\n\n".join(slides)
 
 
 def _try_decode_text(data: bytes) -> str | None:
-    """嘗試將 bytes 解碼為文字，失敗返回 None"""
+    """Attempts to decode bytes into text, returning None on failure"""
     for encoding in ('utf-8', 'utf-8-sig', 'big5', 'gb2312', 'shift_jis', 'latin-1'):
         try:
             text = data.decode(encoding)
-            # 檢查是否含有過多不可列印字元（binary 特徵）
+            # Check for too many non-printable characters (binary feature)
             non_printable = sum(1 for c in text[:1000] if not c.isprintable() and c not in '\n\r\t')
             if non_printable / max(len(text[:1000]), 1) > 0.1:
                 continue
@@ -2465,26 +2465,26 @@ def get_attachment_text(
     max_length: int = MAX_TEXT_OUTPUT_LENGTH
 ) -> str:
     """
-    讀取 Redmine 附件的文字內容
+    Read the text content of Redmine attachments
 
-    支援格式：
-    - 文件類：PDF、Word (.docx)、Excel (.xlsx)、PowerPoint (.pptx)
-    - 文字類：TXT、JSON、XML、CSV、HTML、Markdown、程式碼等
-    - 其他：自動嘗試以純文字讀取，binary 檔案會提示不支援
+    Supported formats:
+    - File types: PDF, Word (.docx), Excel (.xlsx), PowerPoint (.pptx)
+    - Text: TXT, JSON, XML, CSV, HTML, Markdown, program code, etc.
+    - Others: Automatically try to read in plain text, binary files will be prompted not supported
 
-    注意：圖片請使用 get_attachment_image()
+    Note: Please use get_attachment_image() for images
 
     Args:
-        attachment_id: 附件 ID
-        max_length: 文字輸出最大字元數（預設 50000）
+        attachment_id: attachment ID
+        max_length: The maximum number of characters for text output (default 50000)
 
     Returns:
-        附件的文字內容或錯誤訊息
+        Attachment text or error message
     """
     try:
         client = get_client()
 
-        # 下載附件
+        # Download attachment
         file_data, attachment_info = client.download_attachment(attachment_id)
 
         filename = attachment_info.get('filename', 'unknown')
@@ -2492,24 +2492,24 @@ def get_attachment_text(
         filesize = attachment_info.get('filesize', 0)
         ext = _get_file_extension(filename)
 
-        # 檢查檔案大小
+        # Check file size
         if filesize > MAX_ATTACHMENT_SIZE_BYTES:
-            return f"附件 #{attachment_id} ({filename}) 檔案過大\n" \
-                   f"大小: {filesize / 1024 / 1024:.2f} MB\n" \
-                   f"限制: {MAX_ATTACHMENT_SIZE_BYTES / 1024 / 1024:.0f} MB"
+            return f"appendix #{attachment_id} ({filename}) file too large\n" \
+                   f"size: {filesize / 1024 / 1024:.2f} MB\n" \
+                   f"limit: {MAX_ATTACHMENT_SIZE_BYTES / 1024 / 1024:.0f} MB"
 
-        # 圖片類型 → 提示使用 get_attachment_image
+        # Image type → prompt to use get_attachment_image
         if content_type in SUPPORTED_IMAGE_TYPES:
-            return f"附件 #{attachment_id} ({filename}) 是圖片檔案\n" \
-                   f"請使用 get_attachment_image({attachment_id}) 進行視覺分析"
+            return f"appendix #{attachment_id} ({filename}) is the image file\n" \
+                   f"Please use get_attachment_image({attachment_id}) for visual analysis"
 
-        # 舊版 Office 格式提示
+        # Old Office formatting tips
         if ext in LEGACY_OFFICE_EXTENSIONS:
             new_ext = ext + 'x'
-            return f"附件 #{attachment_id} ({filename}) 為舊版 Office 格式 ({ext})\n" \
-                   f"目前僅支援新版格式 ({new_ext})，請將檔案轉存為新版格式後重新上傳"
+            return f"appendix #{attachment_id} ({filename}) is an older Office format ({ext})\n" \
+                   f"Currently only new formats are supported ({new_ext}), please convert the file to the new format and upload it again."
 
-        # Office 文件類型
+        # Office file types
         office_type = OFFICE_EXTENSIONS.get(ext)
         extracted_text = None
         format_label = ""
@@ -2528,59 +2528,59 @@ def get_attachment_text(
                 extracted_text = _extract_pptx_text(file_data)
                 format_label = "PowerPoint"
         except Exception as e:
-            return f"附件 #{attachment_id} ({filename}) 解析失敗\n" \
-                   f"類型: {content_type}\n" \
-                   f"錯誤: {str(e)}"
+            return f"appendix #{attachment_id} ({filename}) parsing failed\n" \
+                   f"type: {content_type}\n" \
+                   f"mistake: {str(e)}"
 
         if extracted_text is not None:
-            pass  # 已由上方 Office 解析完成
+            pass  # It has been parsed by Office above
         elif content_type in TEXT_MIME_TYPES or content_type.startswith('text/') or ext in TEXT_EXTENSIONS:
             extracted_text = _try_decode_text(file_data)
-            format_label = "文字"
+            format_label = "text"
             if extracted_text is None:
-                return f"附件 #{attachment_id} ({filename}) 無法解碼為文字\n" \
-                       f"類型: {content_type}"
+                return f"appendix #{attachment_id} ({filename}) cannot be decoded as literal \n" \
+                       f"type: {content_type}"
         else:
-            # 未知類型 → 嘗試純文字讀取
+            # Unknown type → try plain text read
             extracted_text = _try_decode_text(file_data)
             if extracted_text is not None:
-                format_label = "文字（自動偵測）"
+                format_label = "Text (automatically detected)"
             else:
-                return f"附件 #{attachment_id} ({filename}) 為 binary 檔案，無法讀取文字內容\n" \
-                       f"類型: {content_type}\n" \
-                       f"大小: {filesize / 1024:.2f} KB"
+                return f"appendix #{attachment_id} ({filename}) is a binary file and cannot read the text content\n" \
+                       f"type: {content_type}\n" \
+                       f"size: {filesize / 1024:.2f} KB"
 
-        # 截斷過長內容
+        # Truncate overly long content
         truncated = False
         if len(extracted_text) > max_length:
             extracted_text = extracted_text[:max_length]
             truncated = True
 
-        header = f"附件 #{attachment_id} ({filename}) - {format_label} 內容"
+        header = f"appendix #{attachment_id} ({filename}) - {format_label} content"
         header += f"\n{'=' * 50}\n"
         result = header + extracted_text
 
         if truncated:
-            result += f"\n\n... (內容已截斷，原始長度超過 {max_length} 字元)"
+            result += f"\n\n... (Content has been truncated, original length exceeds {max_length} characters)"
 
         return result
 
     except RedmineAPIError as e:
-        return f"取得附件內容失敗: {str(e)}"
+        return f"Failed to obtain attachment content: {str(e)}"
     except Exception as e:
-        return f"處理附件錯誤: {str(e)}"
+        return f"Handling attachment errors: {str(e)}"
 
 
 @mcp.tool()
 def get_attachment_info(attachment_id: int) -> str:
     """
-    取得附件的詳細資訊（不下載檔案內容）
+    Get attachment details (without downloading file contents)
     
     Args:
-        attachment_id: 附件 ID
+        attachment_id: attachment ID
     
     Returns:
-        附件的詳細資訊
+        Attachment details
     """
     try:
         client = get_client()
@@ -2589,51 +2589,51 @@ def get_attachment_info(attachment_id: int) -> str:
         filesize = attachment.get('filesize', 0)
         size_text = f"{filesize / 1024 / 1024:.2f} MB" if filesize >= 1024 * 1024 else f"{filesize / 1024:.2f} KB"
         
-        result = f"""附件 #{attachment.get('id')} 詳細資訊
+        result = f"""appendix #{attachment.get('id')} Details
 ==================================================
 
-檔案名稱: {attachment.get('filename', 'N/A')}
-檔案大小: {size_text}
-檔案類型: {attachment.get('content_type', 'N/A')}
-說明: {attachment.get('description', '(無說明)')}
+File name: {attachment.get('filename', 'N/A')}
+File size: {size_text}
+File type: {attachment.get('content_type', 'N/A')}
+illustrate: {attachment.get('description', '(no explanation)')}
 
-上傳者: {attachment.get('author', {}).get('name', 'N/A')}
-上傳時間: {attachment.get('created_on', 'N/A')}
+Uploader: {attachment.get('author', {}).get('name', 'N/A')}
+Upload time: {attachment.get('created_on', 'N/A')}
 
-下載連結: {attachment.get('content_url', 'N/A')}"""
+Download link: {attachment.get('content_url', 'N/A')}"""
         
-        # 根據檔案類型提供操作建議
+        # Provide action suggestions based on file type
         content_type = attachment.get('content_type', '')
         att_id = attachment.get('id')
         att_filename = attachment.get('filename', '')
         att_ext = _get_file_extension(att_filename)
 
         if content_type in SUPPORTED_IMAGE_TYPES:
-            result += f"\n\n💡 這是圖片檔案，可使用 get_attachment_image({att_id}) 進行視覺分析"
+            result += f"\n\n💡 This is an image file, you can use get_attachment_image({att_id}) for visual analysis"
         elif (content_type == 'application/pdf' or att_ext == '.pdf'
               or content_type in TEXT_MIME_TYPES or content_type.startswith('text/')
               or att_ext in TEXT_EXTENSIONS or att_ext in OFFICE_EXTENSIONS):
-            result += f"\n\n💡 可使用 get_attachment_text({att_id}) 讀取文字內容"
+            result += f"\n\n💡 can use get_attachment_text({att_id}) Read text content"
         else:
-            result += f"\n\n💡 可嘗試 get_attachment_text({att_id}) 讀取內容（未知格式將自動嘗試純文字讀取）"
+            result += f"\n\n💡 You can try get_attachment_text({att_id}) Read content (unknown formats will automatically try plain text reading)"
         
         return result
         
     except RedmineAPIError as e:
-        return f"取得附件資訊失敗: {str(e)}"
+        return f"Failed to obtain attachment information: {str(e)}"
     except Exception as e:
-        return f"系統錯誤: {str(e)}"
+        return f"System error: {str(e)}"
 
 
 def main():
-    """MCP 服務器主入口點"""
+    """MCP server main entry point"""
     parser = argparse.ArgumentParser(
-        description='Redmine MCP 服務器',
+        description='Redmine MCP server',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='''
-範例:
-  redmine-mcp                           # 預設 stdio 模式
-  redmine-mcp --transport sse           # SSE 模式（預設 port 8000）
+Example:
+  redmine-mcp #Default stdio mode
+  redmine-mcp --transport sse # SSE mode (default port 8000)
   redmine-mcp --transport sse --port 3000 --host 127.0.0.1
         '''
     )
@@ -2641,33 +2641,33 @@ def main():
         '--transport', '-t',
         choices=['stdio', 'sse'],
         default=None,
-        help='傳輸模式：stdio（預設）或 sse'
+        help='Transmission mode: stdio (default) or sse'
     )
     parser.add_argument(
         '--host', '-H',
         default=None,
-        help='SSE 模式綁定位址（預設: 0.0.0.0）'
+        help='SSE mode binding address (default: 0.0.0.0)'
     )
     parser.add_argument(
         '--port', '-p',
         type=int,
         default=None,
-        help='SSE 模式監聽埠（預設: 8000）'
+        help='SSE mode listening port (default: 8000)'
     )
 
     args = parser.parse_args()
     config = get_config()
 
-    # 命令列參數優先於環境變數
+    # Command line parameters take precedence over environment variables
     transport = args.transport or config.transport
 
     if transport == 'sse':
         host = args.host or config.sse_host
         port = args.port or config.sse_port
-        # 設定 SSE 服務器參數
+        # Set SSE server parameters
         mcp.settings.host = host
         mcp.settings.port = port
-        print(f"啟動 SSE 模式: http://{host}:{port}", flush=True)
+        print(f"Start SSE mode: http://{host}:{port}", flush=True)
         mcp.run('sse')
     else:
         mcp.run('stdio')

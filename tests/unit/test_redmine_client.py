@@ -1,5 +1,5 @@
 """
-Redmine 客戶端測試
+Redmine client tests
 """
 
 import os
@@ -13,10 +13,10 @@ from redmine_mcp.redmine_client import (
 
 
 class TestRedmineClient:
-    """RedmineClient 類別測試"""
+    """RedmineClient class tests"""
     
     def setup_method(self):
-        """每個測試前的設置"""
+        """Setup before each test"""
         with patch.dict(os.environ, {
             'REDMINE_DOMAIN': 'https://test.redmine.com',
             'REDMINE_API_KEY': 'test_api_key'
@@ -24,14 +24,14 @@ class TestRedmineClient:
             self.client = RedmineClient()
     
     def test_client_initialization(self):
-        """測試客戶端初始化"""
+        """Test client initialization"""
         assert self.client.config.redmine_domain == 'https://test.redmine.com'
         assert self.client.session.headers['X-Redmine-API-Key'] == 'test_api_key'
         assert self.client.session.timeout == 30
     
     @patch('requests.Session.request')
     def test_make_request_success(self, mock_request):
-        """測試成功的 API 請求"""
+        """Test successful API request"""
         mock_response = Mock()
         mock_response.json.return_value = {'test': 'data'}
         mock_response.content = b'{"test": "data"}'
@@ -44,50 +44,50 @@ class TestRedmineClient:
     
     @patch('requests.Session.request')
     def test_make_request_timeout(self, mock_request):
-        """測試請求逾時"""
-        mock_request.side_effect = requests.exceptions.Timeout()
+        """Test request timeout"""
+        mock_request.side_effect = requests.exceptions.Timeout("Request timed out")
         
-        with pytest.raises(RedmineAPIError, match="請求逾時"):
+        with pytest.raises(RedmineAPIError, match="Request timed out"):
             self.client._make_request('GET', '/test')
     
     @patch('requests.Session.request')
     def test_make_request_connection_error(self, mock_request):
-        """測試連線錯誤"""
-        mock_request.side_effect = requests.exceptions.ConnectionError()
+        """Test connection error"""
+        mock_request.side_effect = requests.exceptions.ConnectionError("Connection failed")
         
-        with pytest.raises(RedmineAPIError, match="連線失敗"):
+        with pytest.raises(RedmineAPIError, match="Connection failed"):
             self.client._make_request('GET', '/test')
     
     @patch('requests.Session.request')
     def test_make_request_http_error(self, mock_request):
-        """測試 HTTP 錯誤"""
+        """Test HTTP error"""
         mock_response = Mock()
         mock_response.status_code = 404
         mock_response.json.return_value = {'errors': ['Not found']}
         mock_response.content = b'{"errors": ["Not found"]}'
         
-        mock_http_error = requests.exceptions.HTTPError()
+        mock_http_error = requests.exceptions.HTTPError("HTTP 404 Not Found")
         mock_http_error.response = mock_response
         mock_response.raise_for_status.side_effect = mock_http_error
         mock_request.return_value = mock_response
         
-        with pytest.raises(RedmineAPIError, match="HTTP 錯誤 404"):
+        with pytest.raises(RedmineAPIError, match="not found"):
             self.client._make_request('GET', '/test')
     
     @patch('requests.Session.request')
     def test_get_issue_success(self, mock_request):
-        """測試成功取得議題"""
+        """Test successful issue retrieval"""
         mock_response = Mock()
         mock_response.json.return_value = {
             'issue': {
                 'id': 1,
-                'subject': '測試議題',
-                'description': '測試描述',
-                'status': {'id': 1, 'name': '新建'},
-                'priority': {'id': 2, 'name': '正常'},
-                'project': {'id': 1, 'name': '測試專案'},
+                'subject': 'Test Issue',
+                'description': 'Test description',
+                'status': {'id': 1, 'name': 'New'},
+                'priority': {'id': 2, 'name': 'Normal'},
+                'project': {'id': 1, 'name': 'Test Project'},
                 'tracker': {'id': 1, 'name': 'Bug'},
-                'author': {'id': 1, 'name': '測試用戶'},
+                'author': {'id': 1, 'name': 'Test User'},
                 'done_ratio': 0
             }
         }
@@ -98,45 +98,45 @@ class TestRedmineClient:
         
         assert isinstance(issue, RedmineIssue)
         assert issue.id == 1
-        assert issue.subject == '測試議題'
-        assert issue.status['name'] == '新建'
+        assert issue.subject == 'Test Issue'
+        assert issue.status['name'] == 'New'
     
     @patch('requests.Session.request')
     def test_get_issue_not_found(self, mock_request):
-        """測試議題不存在"""
+        """Test issue not found"""
         mock_response = Mock()
         mock_response.json.return_value = {}
         mock_response.content = b'{}'
         mock_request.return_value = mock_response
         
-        with pytest.raises(RedmineAPIError, match="議題 1 不存在"):
+        with pytest.raises(RedmineAPIError, match="Issue 1 does not exist"):
             self.client.get_issue(1)
     
     @patch('requests.Session.request')
     def test_list_issues_success(self, mock_request):
-        """測試列出議題"""
+        """Test listing issues"""
         mock_response = Mock()
         mock_response.json.return_value = {
             'issues': [
                 {
                     'id': 1,
-                    'subject': '議題1',
-                    'description': '描述1',
-                    'status': {'id': 1, 'name': '新建'},
-                    'priority': {'id': 2, 'name': '正常'},
-                    'project': {'id': 1, 'name': '專案1'},
+                    'subject': 'Issue1',
+                    'description': 'Description1',
+                    'status': {'id': 1, 'name': 'New'},
+                    'priority': {'id': 2, 'name': 'Normal'},
+                    'project': {'id': 1, 'name': 'Project1'},
                     'tracker': {'id': 1, 'name': 'Bug'},
-                    'author': {'id': 1, 'name': '用戶1'}
+                    'author': {'id': 1, 'name': 'User1'}
                 },
                 {
                     'id': 2,
-                    'subject': '議題2',
-                    'description': '描述2',
-                    'status': {'id': 2, 'name': '進行中'},
-                    'priority': {'id': 3, 'name': '高'},
-                    'project': {'id': 1, 'name': '專案1'},
+                    'subject': 'Issue2',
+                    'description': 'Description2',
+                    'status': {'id': 2, 'name': 'In Progress'},
+                    'priority': {'id': 3, 'name': 'High'},
+                    'project': {'id': 1, 'name': 'Project1'},
                     'tracker': {'id': 2, 'name': 'Feature'},
-                    'author': {'id': 2, 'name': '用戶2'}
+                    'author': {'id': 2, 'name': 'User2'}
                 }
             ]
         }
@@ -147,39 +147,39 @@ class TestRedmineClient:
         
         assert len(issues) == 2
         assert all(isinstance(issue, RedmineIssue) for issue in issues)
-        assert issues[0].subject == '議題1'
-        assert issues[1].subject == '議題2'
+        assert issues[0].subject == 'Issue1'
+        assert issues[1].subject == 'Issue2'
     
     @patch('requests.Session.request')
     def test_update_issue_success(self, mock_request):
-        """測試更新議題"""
+        """Test updating issue"""
         mock_response = Mock()
         mock_response.content = b''
         mock_request.return_value = mock_response
         
-        result = self.client.update_issue(1, subject='新標題', status_id=2)
+        result = self.client.update_issue(1, subject='New Title', status_id=2)
         
         assert result is True
         mock_request.assert_called_once()
         call_args = mock_request.call_args
-        assert call_args[1]['json']['issue']['subject'] == '新標題'
+        assert call_args[1]['json']['issue']['subject'] == 'New Title'
         assert call_args[1]['json']['issue']['status_id'] == 2
     
     def test_update_issue_no_fields(self):
-        """測試更新議題但沒有提供欄位"""
-        with pytest.raises(RedmineAPIError, match="沒有提供要更新的欄位"):
+        """Test updating issue without providing fields"""
+        with pytest.raises(RedmineAPIError, match="No fields provided for update"):
             self.client.update_issue(1)
     
     @patch('requests.Session.request')
     def test_get_project_success(self, mock_request):
-        """測試取得專案"""
+        """Test getting project"""
         mock_response = Mock()
         mock_response.json.return_value = {
             'project': {
                 'id': 1,
-                'name': '測試專案',
+                'name': 'Test Project',
                 'identifier': 'test-project',
-                'description': '專案描述',
+                'description': 'Project description',
                 'status': 1
             }
         }
@@ -190,12 +190,12 @@ class TestRedmineClient:
         
         assert isinstance(project, RedmineProject)
         assert project.id == 1
-        assert project.name == '測試專案'
+        assert project.name == 'Test Project'
         assert project.identifier == 'test-project'
     
     @patch('requests.Session.request')
     def test_test_connection_success(self, mock_request):
-        """測試連線成功"""
+        """Test successful connection"""
         mock_response = Mock()
         mock_response.json.return_value = {'user': {'id': 1, 'login': 'test'}}
         mock_response.content = b'content'
@@ -207,8 +207,8 @@ class TestRedmineClient:
     
     @patch('requests.Session.request')
     def test_test_connection_failure(self, mock_request):
-        """測試連線失敗"""
-        mock_request.side_effect = RedmineAPIError("連線失敗")
+        """Test connection failure"""
+        mock_request.side_effect = RedmineAPIError("Connection failed")
         
         result = self.client.test_connection()
         
@@ -216,10 +216,11 @@ class TestRedmineClient:
 
 
 class TestClientSingleton:
-    """測試客戶端單例模式"""
+    """Test client singleton pattern"""
     
     def test_get_client_singleton(self):
-        """測試 get_client 回傳同一個實例"""
+        """Test get_client returns the same instance"""
+        reload_client()
         with patch.dict(os.environ, {
             'REDMINE_DOMAIN': 'https://test.redmine.com',
             'REDMINE_API_KEY': 'test_api_key'
@@ -230,7 +231,8 @@ class TestClientSingleton:
             assert client1 is client2
     
     def test_reload_client(self):
-        """測試 reload_client 建立新實例"""
+        """Test reload_client creates a new instance"""
+        reload_client()
         with patch.dict(os.environ, {
             'REDMINE_DOMAIN': 'https://test.redmine.com',
             'REDMINE_API_KEY': 'test_api_key'

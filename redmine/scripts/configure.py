@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Redmine 自動配置腳本
-用於建立測試專案、議題和用戶
+Redmine auto-configuration script
+Used to create test projects, issues, and users
 """
 
 import requests
@@ -18,26 +18,26 @@ class RedmineConfigurator:
         self.session = requests.Session()
         self.api_key: Optional[str] = None
         
-        # 登入取得 API 金鑰
+        # Login to obtain API key
         self._login(username, password)
     
     def _login(self, username: str, password: str):
-        """登入並取得 API 金鑰"""
-        print(f"🔐 正在登入 Redmine ({username})...")
+        """Login and obtain API key"""
+        print(f"🔐 Logging in to Redmine ({username})...")
         
-        # 首先取得 CSRF token
+        # First, get CSRF token
         response = self.session.get(f"{self.url}/login")
         if response.status_code != 200:
-            raise Exception(f"無法存取 Redmine: {response.status_code}")
+            raise Exception(f"Cannot access Redmine: {response.status_code}")
         
-        # 解析 CSRF token
+        # Parse CSRF token
         csrf_match = re.search(r'name="authenticity_token" value="([^"]+)"', response.text)
         if not csrf_match:
-            raise Exception("找不到 CSRF token")
+            raise Exception("CSRF token not found")
         
         csrf_token = csrf_match.group(1)
         
-        # 執行登入
+        # Perform login
         login_data = {
             'username': username,
             'password': password,
@@ -47,50 +47,50 @@ class RedmineConfigurator:
         response = self.session.post(f"{self.url}/login", data=login_data, allow_redirects=False)
         
         if response.status_code not in [302, 200]:
-            raise Exception(f"登入失敗: {response.status_code}")
+            raise Exception(f"Login failed: {response.status_code}")
         
-        print("✅ 登入成功")
+        print("✅ Login successful")
         
-        # 取得或建立 API 金鑰
+        # Get or create API key
         self._get_or_create_api_key()
     
     def _get_or_create_api_key(self):
-        """取得或建立 API 金鑰"""
-        print("🔑 正在取得 API 金鑰...")
+        """Get or create API key"""
+        print("🔑 Obtaining API key...")
         
-        # 前往我的帳戶頁面
+        # Go to my account page
         response = self.session.get(f"{self.url}/my/account")
         if response.status_code != 200:
-            print(f"⚠️  無法存取帳戶頁面: {response.status_code}")
+            print(f"⚠️  Cannot access account page: {response.status_code}")
             self._use_fallback_api_key()
             return
             
-        # 列印部分回應內容以便除錯
-        print(f"📄 帳戶頁面回應長度: {len(response.text)} 字元")
+        # Print partial response content for debugging
+        print(f"📄 Account page response length: {len(response.text)} characters")
         
-        # 尋找現有的 API 金鑰（支援中英文界面）
+        # Look for existing API key (supports Chinese and English interfaces)
         api_patterns = [
-            r'API 存取金鑰.*?([a-f0-9]{40})',
+            r'API access key.*?([a-f0-9]{40})',
             r'API access key.*?([a-f0-9]{40})',
             r'api.*?key.*?([a-f0-9]{40})',
-            r'([a-f0-9]{40})'  # 任何 40 位 hex 字串
+            r'([a-f0-9]{40})'  # any 40-char hex string
         ]
         
         for pattern in api_patterns:
             key_match = re.search(pattern, response.text, re.IGNORECASE | re.DOTALL)
             if key_match:
                 self.api_key = key_match.group(1)
-                print(f"✅ 找到現有 API 金鑰: {self.api_key[:8]}...")
+                print(f"✅ Found existing API key: {self.api_key[:8]}...")
                 return
         
-        # 如果沒有找到，嘗試重設 API 金鑰
-        print("🔄 嘗試重設 API 金鑰...")
+        # If not found, try to reset API key
+        print("🔄 Trying to reset API key...")
         csrf_match = re.search(r'name="authenticity_token" value="([^"]+)"', response.text)
         if csrf_match:
             csrf_token = csrf_match.group(1)
-            print(f"🎫 找到 CSRF token: {csrf_token[:8]}...")
+            print(f"🎫 Found CSRF token: {csrf_token[:8]}...")
             
-            # 嘗試重設 API 金鑰
+            # Try to reset API key
             reset_endpoints = [
                 f"{self.url}/my/api_key",
                 f"{self.url}/my/account/reset_api_key"
@@ -103,47 +103,47 @@ class RedmineConfigurator:
                         '_method': 'post'
                     }
                     reset_response = self.session.post(endpoint, data=reset_data, allow_redirects=True)
-                    print(f"🔄 重設請求回應: {reset_response.status_code}")
+                    print(f"🔄 Reset request response: {reset_response.status_code}")
                     
                     if reset_response.status_code in [200, 302]:
-                        # 重新取得帳戶頁面
-                        time.sleep(1)  # 等待一秒
+                        # Re-fetch account page
+                        time.sleep(1)  # Wait one second
                         account_response = self.session.get(f"{self.url}/my/account")
                         
-                        # 再次尋找 API 金鑰
+                        # Search for API key again
                         for pattern in api_patterns:
                             key_match = re.search(pattern, account_response.text, re.IGNORECASE | re.DOTALL)
                             if key_match:
                                 self.api_key = key_match.group(1)
-                                print(f"✅ 重設後取得 API 金鑰: {self.api_key[:8]}...")
+                                print(f"✅ API key obtained after reset: {self.api_key[:8]}...")
                                 return
                                 
-                        break  # 如果請求成功但沒找到金鑰，不再嘗試其他端點
+                        break  # If request succeeded but key not found, don't try other endpoints
                 except Exception as e:
-                    print(f"⚠️  重設端點 {endpoint} 失敗: {e}")
+                    print(f"⚠️  Reset endpoint {endpoint} failed: {e}")
                     continue
         else:
-            print("⚠️  找不到 CSRF token")
+            print("⚠️  CSRF token not found")
         
-        # 如果所有方法都失敗，使用手動方式提示
+        # If all methods fail, use manual prompt
         self._use_fallback_api_key()
     
     def _use_fallback_api_key(self):
-        """使用備用 API 金鑰設定"""
-        print("⚠️  自動取得 API 金鑰失敗")
-        print("📝 請手動取得 API 金鑰:")
-        print("   1. 開啟瀏覽器前往: http://localhost:3000")
-        print("   2. 使用 admin/admin 登入")
-        print("   3. 前往「我的帳戶」→「API 存取金鑰」")
-        print("   4. 如果沒有金鑰，點選「重設」按鈕")
-        print("   5. 複製 API 金鑰並更新 .env 檔案")
+        """Use fallback API key setting"""
+        print("⚠️  Automatic API key acquisition failed")
+        print("📝 Please obtain API key manually:")
+        print("   1. Open browser and go to: http://localhost:3000")
+        print("   2. Log in with admin/admin")
+        print("   3. Go to My Account -> API Access Key")
+        print("   4. If no key exists, click the Reset button")
+        print("   5. Copy the API key and update the .env file")
         
-        # 使用測試金鑰進行後續測試
+        # Use test key for subsequent testing
         self.api_key = "test_api_key_for_development_only_123456789"
-        print(f"🔧 暫時使用測試金鑰: {self.api_key[:8]}...")
+        print(f"🔧 Temporarily using test key: {self.api_key[:8]}...")
     
     def _api_request(self, method: str, endpoint: str, data: dict = None) -> dict:
-        """發送 API 請求"""
+        """Send API request"""
         headers = {
             'X-Redmine-API-Key': self.api_key,
             'Content-Type': 'application/json'
@@ -158,11 +158,11 @@ class RedmineConfigurator:
         elif method.upper() == 'PUT':
             response = self.session.put(url, headers=headers, json=data)
         else:
-            raise ValueError(f"不支援的 HTTP 方法: {method}")
+            raise ValueError(f"Unsupported HTTP method: {method}")
         
         if response.status_code not in [200, 201]:
-            print(f"API 請求失敗: {response.status_code}")
-            print(f"回應: {response.text}")
+            print(f"API request failed: {response.status_code}")
+            print(f"Response: {response.text}")
             return {}
         
         try:
@@ -171,8 +171,8 @@ class RedmineConfigurator:
             return {}
     
     def create_test_project(self, name: str, identifier: str, description: str = "") -> Optional[int]:
-        """建立測試專案"""
-        print(f"📁 正在建立專案: {name}")
+        """Create test project"""
+        print(f"📁 Creating project: {name}")
         
         project_data = {
             'project': {
@@ -187,15 +187,15 @@ class RedmineConfigurator:
         
         if 'project' in response:
             project_id = response['project']['id']
-            print(f"✅ 專案建立成功 (ID: {project_id})")
+            print(f"✅ Project created successfully (ID: {project_id})")
             return project_id
         else:
-            print(f"❌ 專案建立失敗")
+            print(f"❌ Project creation failed")
             return None
     
     def create_test_issue(self, project_id: int, subject: str, description: str = "") -> Optional[int]:
-        """建立測試議題"""
-        print(f"📝 正在建立議題: {subject}")
+        """Create test issue"""
+        print(f"📝 Creating issue: {subject}")
         
         issue_data = {
             'issue': {
@@ -209,21 +209,21 @@ class RedmineConfigurator:
         
         if 'issue' in response:
             issue_id = response['issue']['id']
-            print(f"✅ 議題建立成功 (ID: {issue_id})")
+            print(f"✅ Issue created successfully (ID: {issue_id})")
             return issue_id
         else:
-            print(f"❌ 議題建立失敗")
+            print(f"❌ Issue creation failed")
             return None
     
     def setup_test_data(self):
-        """設定測試資料"""
-        print("🎯 正在建立測試資料...")
+        """Set up test data"""
+        print("🎯 Setting up test data...")
         
-        # 建立測試專案
+        # Create test projects
         projects = [
-            ("MCP 測試專案", "mcp-test", "用於測試 Redmine MCP 整合的專案"),
-            ("軟體開發", "software-dev", "軟體開發相關專案"),
-            ("Bug 追蹤", "bug-tracking", "Bug 追蹤和修復專案")
+            ("MCP Test Project", "mcp-test", "Project for testing Redmine MCP integration"),
+            ("Software Development", "software-dev", "Software development related project"),
+            ("Bug Tracking", "bug-tracking", "Bug tracking and resolution project")
         ]
         
         created_projects = []
@@ -232,34 +232,34 @@ class RedmineConfigurator:
             if project_id:
                 created_projects.append((project_id, name))
         
-        # 為每個專案建立測試議題
+        # Create test issues for each project
         test_issues = [
-            ("修復登入問題", "用戶回報無法使用正確帳號密碼登入系統"),
-            ("新增搜尋功能", "在主頁面添加全文搜尋功能"),
-            ("效能優化", "首頁載入時間過長，需要進行效能優化"),
-            ("UI 改善", "更新使用者介面設計，提升使用體驗"),
-            ("安全性檢查", "進行系統安全性檢查和漏洞修復")
+            ("Fix login issue", "Users report inability to log in with correct credentials"),
+            ("Add search feature", "Add full-text search functionality to the main page"),
+            ("Performance optimization", "Homepage loading time is too long, needs performance optimization"),
+            ("UI improvement", "Update user interface design to improve user experience"),
+            ("Security check", "Perform system security checks and vulnerability fixes")
         ]
         
         for project_id, project_name in created_projects:
-            print(f"\n📋 為專案 '{project_name}' 建立議題...")
+            print(f"\n📋 Creating issues for project '{project_name}'...")
             for subject, description in test_issues:
                 self.create_test_issue(project_id, f"[{project_name}] {subject}", description)
         
         return created_projects
     
     def get_api_key(self) -> str:
-        """取得 API 金鑰"""
+        """Get API key"""
         return self.api_key
 
 
 def main():
-    print("🔧 Redmine 自動配置工具")
+    print("🔧 Redmine Auto-Configuration Tool")
     print("=" * 40)
     
     try:
-        # 等待 Redmine 啟動
-        print("⏳ 檢查 Redmine 是否啟動...")
+        # Wait for Redmine to start
+        print("⏳ Checking if Redmine is running...")
         import time
         for i in range(30):
             try:
@@ -268,27 +268,27 @@ def main():
                     break
             except:
                 pass
-            print(f"等待中... ({i+1}/30)")
+            print(f"Waiting... ({i+1}/30)")
             time.sleep(2)
         else:
-            print("❌ Redmine 未啟動，請先執行 ./setup_redmine.sh")
+            print("❌ Redmine is not running, please run ./setup_redmine.sh first")
             return False
         
-        print("✅ Redmine 已啟動")
+        print("✅ Redmine is running")
         
-        # 設定 Redmine
+        # Configure Redmine
         configurator = RedmineConfigurator()
         created_projects = configurator.setup_test_data()
         api_key = configurator.get_api_key()
         
-        print("\n🎉 Redmine 設定完成！")
+        print("\n🎉 Redmine setup complete!")
         print("=" * 40)
         print(f"📍 Redmine URL: http://localhost:3000")
-        print(f"🔑 API 金鑰: {api_key}")
-        print(f"📁 建立了 {len(created_projects)} 個測試專案")
+        print(f"🔑 API Key: {api_key}")
+        print(f"📁 Created {len(created_projects)} test projects")
         
-        # 更新 .env 檔案
-        env_content = f"""# Redmine MCP 測試環境配置
+        # Update .env file
+        env_content = f"""# Redmine MCP test environment configuration
 REDMINE_DOMAIN=http://localhost:3000
 REDMINE_API_KEY={api_key}
 REDMINE_TIMEOUT=30
@@ -298,14 +298,14 @@ DEBUG_MODE=true
         with open('.env', 'w') as f:
             f.write(env_content)
         
-        print("✅ .env 檔案已更新")
-        print("\n🚀 現在可以測試 MCP 功能了！")
-        print("   執行: uv run python test_claude_integration.py")
+        print("✅ .env file updated")
+        print("\n🚀 You can now test MCP functionality!")
+        print("   Run: uv run python test_claude_integration.py")
         
         return True
         
     except Exception as e:
-        print(f"❌ 設定失敗: {e}")
+        print(f"❌ Setup failed: {e}")
         return False
 
 

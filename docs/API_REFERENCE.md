@@ -1,461 +1,461 @@
-# API 參考文件
+# API Reference
 
-本文件詳細說明 Redmine MCP Server 提供的所有 MCP 工具及其參數。
+This document provides a detailed description of all MCP tools provided by the Redmine MCP Server and their parameters.
 
-## 📋 目錄
+## 📋 Table of Contents
 
-1. [基本工具](#基本工具)
-2. [議題查詢工具](#議題查詢工具)
-3. [議題操作工具](#議題操作工具)
-4. [專案管理工具](#專案管理工具)
-5. [搜尋工具](#搜尋工具)
-6. [參數類型說明](#參數類型說明)
-7. [錯誤處理](#錯誤處理)
+1. [Basic Tools](#basic-tools)
+2. [Issue Query Tools](#issue-query-tools)
+3. [Issue Operation Tools](#issue-operation-tools)
+4. [Project Management Tools](#project-management-tools)
+5. [Search Tools](#search-tools)
+6. [Parameter Type Reference](#parameter-type-reference)
+7. [Error Handling](#error-handling)
 
-## 🔧 基本工具
+## 🔧 Basic Tools
 
 ### server_info
 
-取得服務器資訊和狀態。
+Get server information and status.
 
-**參數：** 無
+**Parameters:** None
 
-**回傳：**
+**Returns:**
 ```
-Redmine MCP 服務器已啟動
-- Redmine 網域: https://your-redmine.com
-- 除錯模式: false
-- API 逾時: 30秒
+Redmine MCP Server is running
+- Redmine Domain: https://your-redmine.com
+- Debug Mode: false
+- API Timeout: 30 seconds
 ```
 
-**使用範例：**
+**Usage Example:**
 ```python
-# 在 Claude Code 中
-顯示服務器資訊
+# In Claude Code
+Show server information
 ```
 
 ---
 
 ### health_check
 
-健康檢查工具，確認服務器正常運作。
+Health check tool to confirm the server is operating normally.
 
-**參數：** 無
+**Parameters:** None
 
-**回傳：**
-- 成功：`✓ 服務器正常運作，已連接到 {domain}`
-- 失敗：`✗ 無法連接到 Redmine 服務器: {domain}` 或 `✗ 服務器異常: {error}`
+**Returns:**
+- Success: `✓ Server is running normally, connected to {domain}`
+- Failure: `✗ Unable to connect to Redmine server: {domain}` or `✗ Server error: {error}`
 
-**使用範例：**
+**Usage Example:**
 ```python
-# 在 Claude Code 中
-執行健康檢查
+# In Claude Code
+Run health check
 ```
 
-## 📄 議題查詢工具
+## 📄 Issue Query Tools
 
 ### get_issue
 
-取得指定的 Redmine 議題詳細資訊。
+Get detailed information for a specified Redmine issue.
 
-**參數：**
-- `issue_id` (int, 必填)：議題 ID
-- `include_details` (bool, 可選)：是否包含詳細資訊（預設 true）
+**Parameters:**
+- `issue_id` (int, required): Issue ID
+- `include_details` (bool, optional): Whether to include detailed information (default true)
 
-**回傳：** 議題的詳細資訊，包含基本資訊和描述
+**Returns:** Detailed issue information, including basic information and description
 
-**使用範例：**
+**Usage Example:**
 ```python
-# 在 Claude Code 中
-取得議題 #123 的詳細資訊
-取得議題 #456 的基本資訊（不包含詳細資料）
+# In Claude Code
+Get detailed information for issue #123
+Get basic information for issue #456 (without detailed data)
 ```
 
 ---
 
 ### list_project_issues
 
-列出專案的議題。
+List issues in a project.
 
-**參數：**
-- `project_id` (int, 必填)：專案 ID
-- `status_filter` (str, 可選)：狀態篩選，可選值 "open", "closed", "all"（預設 "open"）
-- `limit` (int, 可選)：最大回傳數量，範圍 1-100（預設 20）
+**Parameters:**
+- `project_id` (int, required): Project ID
+- `status_filter` (str, optional): Status filter, options "open", "closed", "all" (default "open")
+- `limit` (int, optional): Maximum number of results, range 1-100 (default 20)
 
-**回傳：** 專案議題列表，以表格格式呈現
+**Returns:** Project issue list, displayed in table format
 
-**使用範例：**
+**Usage Example:**
 ```python
-# 在 Claude Code 中
-列出專案 1 的所有開放議題
-顯示專案 2 中已關閉的議題，限制 10 筆
-列出專案 3 的所有議題
+# In Claude Code
+List all open issues in project 1
+Show closed issues in project 2, limit 10
+List all issues in project 3
 ```
 
 ---
 
 ### get_my_issues
 
-取得指派給當前用戶的議題列表。
+Get a list of issues assigned to the current user.
 
-**參數：**
-- `status_filter` (str, 可選)：狀態篩選，可選值 "open", "closed", "all"（預設 "open"）
-- `limit` (int, 可選)：最大回傳數量，範圍 1-100（預設 20）
+**Parameters:**
+- `status_filter` (str, optional): Status filter, options "open", "closed", "all" (default "open")
+- `limit` (int, optional): Maximum number of results, range 1-100 (default 20)
 
-**回傳：** 當前用戶的議題列表
+**Returns:** Current user's issue list
 
-**使用範例：**
+**Usage Example:**
 ```python
-# 在 Claude Code 中
-顯示我的所有開放議題
-取得我的已完成議題，限制 15 筆
+# In Claude Code
+Show all my open issues
+Get my completed issues, limit 15
 ```
 
-## ✏️ 議題操作工具
+## ✏️ Issue Operation Tools
 
 ### create_new_issue
 
-建立新的 Redmine 議題。
+Create a new Redmine issue.
 
-**參數：**
-- `project_id` (int, 必填)：專案 ID
-- `subject` (str, 必填)：議題標題
-- `description` (str, 可選)：議題描述
-- `tracker_id` (int, 可選)：追蹤器 ID
-- `priority_id` (int, 可選)：優先級 ID
-- `assigned_to_id` (int, 可選)：指派給的用戶 ID
+**Parameters:**
+- `project_id` (int, required): Project ID
+- `subject` (str, required): Issue title
+- `description` (str, optional): Issue description
+- `tracker_id` (int, optional): Tracker ID
+- `priority_id` (int, optional): Priority ID
+- `assigned_to_id` (int, optional): User ID to assign to
 
-**回傳：** 建立結果訊息，包含新議題的基本資訊
+**Returns:** Creation result message, including new issue basic information
 
-**使用範例：**
+**Usage Example:**
 ```python
-# 在 Claude Code 中
-在專案 1 中建立議題「修復登入錯誤」，描述「用戶無法正常登入」
-建立議題：標題「新功能開發」，專案 ID 2，追蹤器 ID 2，優先級 ID 3
+# In Claude Code
+Create issue "Fix login error" in project 1, description "Users cannot log in normally"
+Create issue: title "New feature development", project ID 2, tracker ID 2, priority ID 3
 ```
 
 ---
 
 ### update_issue_status
 
-更新議題狀態。
+Update issue status.
 
-**參數：**
-- `issue_id` (int, 必填)：議題 ID
-- `status_id` (int, 必填)：新的狀態 ID
-- `notes` (str, 可選)：更新備註
+**Parameters:**
+- `issue_id` (int, required): Issue ID
+- `status_id` (int, required): New status ID
+- `notes` (str, optional): Update note
 
-**回傳：** 更新結果訊息
+**Returns:** Update result message
 
-**使用範例：**
+**Usage Example:**
 ```python
-# 在 Claude Code 中
-將議題 #123 狀態更新為 3（已解決）
-更新議題 #456 狀態為 2，備註「開始處理此問題」
+# In Claude Code
+Update issue #123 status to 3 (Resolved)
+Update issue #456 status to 2, note "Starting to handle this issue"
 ```
 
 ---
 
 ### update_issue_content
 
-更新議題內容（標題、描述、優先級、完成度等）。
+Update issue content (title, description, priority, completion percentage, etc.).
 
-**參數：**
-- `issue_id` (int, 必填)：議題 ID
-- `subject` (str, 可選)：新的議題標題
-- `description` (str, 可選)：新的議題描述
-- `priority_id` (int, 可選)：新的優先級 ID
-- `done_ratio` (int, 可選)：新的完成百分比 0-100
+**Parameters:**
+- `issue_id` (int, required): Issue ID
+- `subject` (str, optional): New issue title
+- `description` (str, optional): New issue description
+- `priority_id` (int, optional): New priority ID
+- `done_ratio` (int, optional): New completion percentage 0-100
 
-**回傳：** 更新結果訊息
+**Returns:** Update result message
 
-**使用範例：**
+**Usage Example:**
 ```python
-# 在 Claude Code 中
-更新議題 #123 的標題為「修復用戶登入問題」
-將議題 #456 完成度設為 80%
-更新議題 #789 的描述和優先級
+# In Claude Code
+Update issue #123 title to "Fix user login issue"
+Set issue #456 completion percentage to 80%
+Update issue #789 description and priority
 ```
 
 ---
 
 ### add_issue_note
 
-為議題新增備註。
+Add a note to an issue.
 
-**參數：**
-- `issue_id` (int, 必填)：議題 ID
-- `notes` (str, 必填)：備註內容
-- `private` (bool, 可選)：是否為私有備註（預設 false）
+**Parameters:**
+- `issue_id` (int, required): Issue ID
+- `notes` (str, required): Note content
+- `private` (bool, optional): Whether it is a private note (default false)
 
-**回傳：** 新增結果訊息
+**Returns:** Add result message
 
-**使用範例：**
+**Usage Example:**
 ```python
-# 在 Claude Code 中
-為議題 #123 新增備註「已完成初步分析」
-為議題 #456 新增私有備註「內部討論結果」
+# In Claude Code
+Add note "Preliminary analysis completed" to issue #123
+Add private note "Internal discussion results" to issue #456
 ```
 
 ---
 
 ### assign_issue
 
-指派議題給用戶。
+Assign an issue to a user.
 
-**參數：**
-- `issue_id` (int, 必填)：議題 ID
-- `user_id` (int, 可選)：指派給的用戶 ID（如果為 None 則取消指派）
-- `notes` (str, 可選)：指派備註
+**Parameters:**
+- `issue_id` (int, required): Issue ID
+- `user_id` (int, optional): User ID to assign to (if None, unassign)
+- `notes` (str, optional): Assignment note
 
-**回傳：** 指派結果訊息
+**Returns:** Assignment result message
 
-**使用範例：**
+**Usage Example:**
 ```python
-# 在 Claude Code 中
-將議題 #123 指派給用戶 ID 5
-取消議題 #456 的指派
-指派議題 #789 給用戶 3，備註「請協助處理」
+# In Claude Code
+Assign issue #123 to user ID 5
+Unassign issue #456
+Assign issue #789 to user 3, note "Please assist with handling"
 ```
 
 ---
 
 ### close_issue
 
-關閉議題（設定為已完成狀態）。
+Close an issue (set to completed status).
 
-**參數：**
-- `issue_id` (int, 必填)：議題 ID
-- `notes` (str, 可選)：關閉備註
-- `done_ratio` (int, 可選)：完成百分比（預設 100）
+**Parameters:**
+- `issue_id` (int, required): Issue ID
+- `notes` (str, optional): Close note
+- `done_ratio` (int, optional): Completion percentage (default 100)
 
-**回傳：** 關閉結果訊息
+**Returns:** Close result message
 
-**使用範例：**
+**Usage Example:**
 ```python
-# 在 Claude Code 中
-關閉議題 #123
-關閉議題 #456，備註「問題已解決」
-關閉議題 #789，完成度 100%，備註「測試通過」
+# In Claude Code
+Close issue #123
+Close issue #456, note "Issue resolved"
+Close issue #789, completion percentage 100%, note "Test passed"
 ```
 
-## 🗂️ 專案管理工具
+## 🗂️ Project Management Tools
 
 ### get_projects
 
-取得可存取的專案列表。
+Get a list of accessible projects.
 
-**參數：** 無
+**Parameters:** None
 
-**回傳：** 格式化的專案列表，包含 ID、識別碼、名稱、狀態
+**Returns:** Formatted project list, including ID, identifier, name, status
 
-**使用範例：**
+**Usage Example:**
 ```python
-# 在 Claude Code 中
-顯示所有可存取的專案
-取得專案列表
+# In Claude Code
+Show all accessible projects
+Get project list
 ```
 
 ---
 
 ### get_issue_statuses
 
-取得所有可用的議題狀態列表。
+Get a list of all available issue statuses.
 
-**參數：** 無
+**Parameters:** None
 
-**回傳：** 格式化的狀態列表，包含 ID、名稱、是否已關閉
+**Returns:** Formatted status list, including ID, name, whether closed
 
-**使用範例：**
+**Usage Example:**
 ```python
-# 在 Claude Code 中
-顯示所有可用的議題狀態
-取得狀態列表
+# In Claude Code
+Show all available issue statuses
+Get status list
 ```
 
-## 🔍 搜尋工具
+## 🔍 Search Tools
 
 ### search_issues
 
-搜尋議題（在標題或描述中搜尋關鍵字）。
+Search for issues (search for keywords in title or description).
 
-**參數：**
-- `query` (str, 必填)：搜尋關鍵字
-- `project_id` (int, 可選)：限制在特定專案中搜尋
-- `limit` (int, 可選)：最大回傳數量，範圍 1-50（預設 10）
+**Parameters:**
+- `query` (str, required): Search keyword
+- `project_id` (int, optional): Limit search to a specific project
+- `limit` (int, optional): Maximum number of results, range 1-50 (default 10)
 
-**回傳：** 符合搜尋條件的議題列表
+**Returns:** List of issues matching the search criteria
 
-**使用範例：**
+**Usage Example:**
 ```python
-# 在 Claude Code 中
-搜尋包含「登入」的議題
-在專案 1 中搜尋「效能」相關議題
-搜尋「錯誤」關鍵字，限制 20 筆結果
+# In Claude Code
+Search for issues containing "login"
+Search for "performance" related issues in project 1
+Search for "error" keyword, limit 20 results
 ```
 
-## 📝 參數類型說明
+## 📝 Parameter Type Reference
 
-### 資料類型
+### Data Types
 
-| 類型 | 說明 | 範例 |
-|------|------|------|
-| `int` | 整數 | `123`, `0`, `-5` |
-| `str` | 字串 | `"議題標題"`, `"備註內容"` |
-| `bool` | 布林值 | `true`, `false` |
+| Type | Description | Example |
+|------|-------------|---------|
+| `int` | Integer | `123`, `0`, `-5` |
+| `str` | String | `"Issue Title"`, `"Note content"` |
+| `bool` | Boolean | `true`, `false` |
 
-### 常用 ID 對應
+### Common ID Mappings
 
-#### 狀態 ID (status_id)
-通常的對應關係（可能因 Redmine 設定而異）：
-- `1`: 新建
-- `2`: 進行中
-- `3`: 已解決
-- `4`: 回饋中
-- `5`: 已關閉
-- `6`: 已拒絕
+#### Status ID (status_id)
+Typical mappings (may vary depending on Redmine configuration):
+- `1`: New
+- `2`: In Progress
+- `3`: Resolved
+- `4`: Feedback
+- `5`: Closed
+- `6`: Rejected
 
-#### 優先級 ID (priority_id)
-通常的對應關係：
-- `1`: 低
-- `2`: 正常
-- `3`: 高
-- `4`: 緊急
-- `5`: 立即
+#### Priority ID (priority_id)
+Typical mappings:
+- `1`: Low
+- `2`: Normal
+- `3`: High
+- `4`: Urgent
+- `5`: Immediate
 
-#### 追蹤器 ID (tracker_id)
-通常的對應關係：
+#### Tracker ID (tracker_id)
+Typical mappings:
 - `1`: Bug
-- `2`: 功能
-- `3`: 支援
+- `2`: Feature
+- `3`: Support
 
-### 特殊值
+### Special Values
 
-#### status_filter 參數
-- `"open"`: 所有開放狀態的議題
-- `"closed"`: 所有已關閉狀態的議題
-- `"all"`: 所有狀態的議題
+#### status_filter Parameter
+- `"open"`: All issues with open status
+- `"closed"`: All issues with closed status
+- `"all"`: All status issues
 
-## ⚠️ 錯誤處理
+## ⚠️ Error Handling
 
-### 常見錯誤類型
+### Common Error Types
 
-#### 認證錯誤
+#### Authentication Error
 ```
-認證失敗：請檢查 API 金鑰是否正確
+Authentication failed: Please check if the API key is correct
 ```
-**解決方案：** 檢查 `.env` 檔案中的 `REDMINE_API_KEY` 設定
+**Solution:** Check the `REDMINE_API_KEY` setting in the `.env` file
 
-#### 權限錯誤
+#### Permission Error
 ```
-權限不足：您沒有執行此操作的權限
+Insufficient permissions: You do not have permission to perform this operation
 ```
-**解決方案：** 確認用戶有足夠權限執行該操作
+**Solution:** Confirm the user has sufficient permissions to perform the operation
 
-#### 資源不存在
+#### Resource Not Found
 ```
-找不到指定的議題，請確認議題 ID 是否正確
+Specified issue not found, please confirm the issue ID is correct
 ```
-**解決方案：** 檢查提供的 ID 是否正確
+**Solution:** Check if the provided ID is correct
 
-#### 資料驗證錯誤
+#### Data Validation Error
 ```
-資料格式錯誤：請檢查輸入的資料是否符合要求
+Data format error: Please check if the input data meets the requirements
 ```
-**解決方案：** 檢查參數格式和必填欄位
+**Solution:** Check parameter format and required fields
 
-#### 連線錯誤
+#### Connection Error
 ```
-連線失敗：請檢查網路連線和 Redmine 伺服器狀態
+Connection failed: Please check network connection and Redmine server status
 ```
-**解決方案：** 檢查網路連線和服務器狀態
+**Solution:** Check network connection and server status
 
-### 除錯模式
+### Debug Mode
 
-啟用除錯模式可取得更詳細的錯誤資訊：
+Enable debug mode to get more detailed error information:
 
 ```env
 DEBUG_MODE=true
 ```
 
-### 參數驗證
+### Parameter Validation
 
-所有工具都包含參數驗證：
+All tools include parameter validation:
 
-#### 必填參數檢查
-- 確保所有必填參數都有提供
-- 檢查參數類型是否正確
+#### Required Parameter Check
+- Ensure all required parameters are provided
+- Check if parameter types are correct
 
-#### 數值範圍檢查
-- `limit` 參數限制在合理範圍內
-- `done_ratio` 必須在 0-100 之間
-- ID 參數必須為正整數
+#### Value Range Check
+- `limit` parameter is restricted to reasonable ranges
+- `done_ratio` must be between 0-100
+- ID parameters must be positive integers
 
-#### 字串長度檢查
-- 議題標題不得超過 255 字元
-- 描述不得超過 65535 字元
+#### String Length Check
+- Issue title must not exceed 255 characters
+- Description must not exceed 65535 characters
 
-## 🔄 工具執行流程
+## 🔄 Tool Execution Flow
 
-### 1. 參數驗證
-所有輸入參數都會經過驗證，確保格式正確
+### 1. Parameter Validation
+All input parameters are validated to ensure correct format
 
-### 2. API 呼叫
-使用 Redmine REST API 執行實際操作
+### 2. API Call
+Use Redmine REST API to perform actual operations
 
-### 3. 結果處理
-將 API 回應轉換為友善的使用者介面格式
+### 3. Result Processing
+Convert API responses to user-friendly interface format
 
-### 4. 錯誤處理
-捕捉並轉換錯誤訊息為易懂的中文說明
+### 4. Error Handling
+Catch and convert error messages into easy-to-understand explanations
 
-## 💡 最佳實務
+## 💡 Best Practices
 
-### 參數使用建議
+### Parameter Usage Recommendations
 
-1. **使用有意義的 ID**
+1. **Use meaningful IDs**
    ```python
-   # 好的做法
-   取得議題 #123 的詳細資訊
+   # Good practice
+   Get detailed information for issue #123
    
-   # 避免
-   取得議題 #999999（不存在的 ID）
+   # Avoid
+   Get detailed information for issue #999999 (non-existent ID)
    ```
 
-2. **提供完整描述**
+2. **Provide complete descriptions**
    ```python
-   # 好的做法
-   建立議題「修復用戶登入問題」，描述「用戶回報無法正常登入，錯誤訊息為 500 錯誤」
+   # Good practice
+   Create issue "Fix user login issue", description "Users report inability to log in normally, error message is 500 error"
    
-   # 避免
-   建立議題「修復」（描述太簡略）
+   # Avoid
+   Create issue "Fix" (description too brief)
    ```
 
-3. **適當的分頁限制**
+3. **Appropriate pagination limits**
    ```python
-   # 好的做法
-   列出專案 1 的議題，限制 20 筆
+   # Good practice
+   List issues in project 1, limit 20
    
-   # 避免
-   列出專案 1 的議題，限制 1000 筆（可能影響效能）
+   # Avoid
+   List issues in project 1, limit 1000 (may affect performance)
    ```
 
-### 工作流程建議
+### Workflow Recommendations
 
-1. **先查詢再操作**
+1. **Query before operating**
    ```python
-   # 建議流程
-   1. 取得專案列表
-   2. 選擇目標專案
-   3. 建立或更新議題
+   # Recommended workflow
+   1. Get project list
+   2. Select target project
+   3. Create or update issue
    ```
 
-2. **提供適當備註**
+2. **Provide appropriate notes**
    ```python
-   # 好的做法
-   更新議題狀態時加上有意義的備註說明進度或變更原因
+   # Good practice
+   Add meaningful notes explaining progress or change reasons when updating issue status
    ```
 
 ---
 
-更多詳細資訊請參考 [使用範例](USAGE_EXAMPLES.md) 或 [README.md](../README.md)。
+For more details, please refer to [Usage Examples](USAGE_EXAMPLES.md) or [README.md](../README.md).

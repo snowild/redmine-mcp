@@ -1,5 +1,5 @@
 """
-測試 get_attachment_text 相關功能
+Test get_attachment_text related functions
 """
 import pytest
 from unittest.mock import patch, Mock
@@ -41,7 +41,7 @@ class TestTryDecodeText:
         assert "Hello BOM" in result
 
     def test_binary_data(self):
-        # 大量不可列印字元 → 應返回 None
+        # Large amount of non-printable characters → should return None
         binary = bytes(range(256)) * 10
         result = _try_decode_text(binary)
         assert result is None
@@ -63,43 +63,43 @@ class TestTryDecodeText:
 
 class TestExtractPdfText:
     def test_extract_pdf(self):
-        """測試 PDF 提取（使用真實的最小 PDF）"""
+        """Test PDF extraction (using a real minimal PDF)"""
         from pypdf import PdfWriter
         from io import BytesIO
 
         writer = PdfWriter()
         writer.add_blank_page(width=72, height=72)
 
-        # PyPDF2 blank page 不含文字，所以預期回傳提示訊息
+        # PyPDF2 blank page contains no text, so expect a hint message
         buf = BytesIO()
         writer.write(buf)
         result = _extract_pdf_text(buf.getvalue())
-        assert "無法提取" in result or "第" in result
+        assert "cannot extract" in result or "Page" in result
 
 
 class TestExtractDocxText:
     def test_extract_docx(self):
-        """測試 Word 文字提取"""
+        """Test Word text extraction"""
         from docx import Document
         from io import BytesIO
 
         doc = Document()
-        doc.add_paragraph("第一段文字")
-        doc.add_paragraph("第二段文字")
+        doc.add_paragraph("First paragraph text")
+        doc.add_paragraph("Second paragraph text")
 
         buf = BytesIO()
         doc.save(buf)
         result = _extract_docx_text(buf.getvalue())
-        assert "第一段文字" in result
-        assert "第二段文字" in result
+        assert "First paragraph text" in result
+        assert "Second paragraph text" in result
 
     def test_extract_docx_with_table(self):
-        """測試 Word 表格提取"""
+        """Test Word table extraction"""
         from docx import Document
         from io import BytesIO
 
         doc = Document()
-        doc.add_paragraph("標題")
+        doc.add_paragraph("Title")
         table = doc.add_table(rows=2, cols=2)
         table.cell(0, 0).text = "A1"
         table.cell(0, 1).text = "B1"
@@ -109,12 +109,12 @@ class TestExtractDocxText:
         buf = BytesIO()
         doc.save(buf)
         result = _extract_docx_text(buf.getvalue())
-        assert "標題" in result
+        assert "Title" in result
         assert "A1" in result
         assert "B2" in result
 
     def test_extract_empty_docx(self):
-        """測試空 Word 文件"""
+        """Test empty Word document"""
         from docx import Document
         from io import BytesIO
 
@@ -122,66 +122,66 @@ class TestExtractDocxText:
         buf = BytesIO()
         doc.save(buf)
         result = _extract_docx_text(buf.getvalue())
-        assert "無文字內容" in result
+        assert "no text content" in result
 
 
 class TestExtractXlsxText:
     def test_extract_xlsx(self):
-        """測試 Excel 提取"""
+        """Test Excel extraction"""
         from openpyxl import Workbook
         from io import BytesIO
 
         wb = Workbook()
         ws = wb.active
-        ws.title = "資料表"
-        ws['A1'] = "姓名"
-        ws['B1'] = "分數"
-        ws['A2'] = "小明"
+        ws.title = "DataSheet"
+        ws['A1'] = "Name"
+        ws['B1'] = "Score"
+        ws['A2'] = "John"
         ws['B2'] = 95
 
         buf = BytesIO()
         wb.save(buf)
         result = _extract_xlsx_text(buf.getvalue())
-        assert "資料表" in result
-        assert "姓名" in result
-        assert "小明" in result
+        assert "DataSheet" in result
+        assert "Name" in result
+        assert "John" in result
         assert "95" in result
 
     def test_extract_empty_xlsx(self):
-        """測試空 Excel"""
+        """Test empty Excel"""
         from openpyxl import Workbook
         from io import BytesIO
 
         wb = Workbook()
         ws = wb.active
-        # 清空預設 cell
+        # Clear default cell
         buf = BytesIO()
         wb.save(buf)
-        # 空的 workbook 會有一個空 sheet，但沒有內容
+        # Empty workbook has one empty sheet, but no content
         result = _extract_xlsx_text(buf.getvalue())
-        # openpyxl 新建的 workbook 可能有空 row，結果依實作而定
+        # New workbook created by openpyxl may have empty rows, result depends on implementation
         assert isinstance(result, str)
 
 
 class TestExtractPptxText:
     def test_extract_pptx(self):
-        """測試 PowerPoint 提取"""
+        """Test PowerPoint extraction"""
         from pptx import Presentation
         from io import BytesIO
 
         prs = Presentation()
         slide = prs.slides.add_slide(prs.slide_layouts[0])
-        slide.shapes.title.text = "投影片標題"
-        slide.placeholders[1].text = "內容文字"
+        slide.shapes.title.text = "Slide Title"
+        slide.placeholders[1].text = "Content text"
 
         buf = BytesIO()
         prs.save(buf)
         result = _extract_pptx_text(buf.getvalue())
-        assert "投影片標題" in result
-        assert "內容文字" in result
+        assert "Slide Title" in result
+        assert "Content text" in result
 
     def test_extract_empty_pptx(self):
-        """測試空簡報"""
+        """Test empty presentation"""
         from pptx import Presentation
         from io import BytesIO
 
@@ -189,4 +189,4 @@ class TestExtractPptxText:
         buf = BytesIO()
         prs.save(buf)
         result = _extract_pptx_text(buf.getvalue())
-        assert "無文字內容" in result
+        assert "no text content" in result

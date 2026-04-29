@@ -1,96 +1,96 @@
-# Issue: 枚舉值設定與實際 Redmine 系統對齊
+# Issue: Enumeration Value Alignment with Actual Redmine System
 
-## 問題描述
+## Problem Description
 
-用戶提供了實際 Redmine 系統中已設定的枚舉值截圖，發現我們的設定指南和測試資料與實際使用的值不完全一致，需要更新以反映真實的使用情況。
+Users provided screenshots of enumeration values configured in the actual Redmine system, and we found that our setup guide and test data were not completely consistent with the actual values being used, requiring updates to reflect real-world usage.
 
-## 實際枚舉值設定
+## Actual Enumeration Value Configuration
 
-根據用戶提供的截圖，實際的枚舉值設定如下：
+Based on screenshots provided by users, the actual enumeration value configuration is as follows:
 
-### 議題優先權
-1. **低** - 非緊急的改善
-2. **正常** - 一般議題（預設）
-3. **高-這邊拜處理** - 重要功能或錯誤，優先處理
-4. **速-這兩天處理** - 緊急議題，需在2天內處理
-5. **急-馬上處理** - 嚴重錯誤，需立即處理
+### Issue Priority
+1. **Low** - Non-urgent improvements
+2. **Normal** - General issues (default)
+3. **High - Please handle this side** - Important features or bugs, handle with priority
+4. **Urgent - Handle within two days** - Urgent issues, need to be handled within 2 days
+5. **Critical - Handle immediately** - Serious bugs, need immediate handling
 
-### 活動（時間追蹤）
-1. **設計** - 系統設計和規劃（預設）
-2. **開發** - 程式開發和編碼
-3. **除錯** - 程式錯誤修復
-4. **調查** - 問題分析和研究
-5. **討論** - 會議和技術討論
-6. **測試** - 測試和品質保證
-7. **維護** - 系統維護和支援
-8. **文件** - 文件撰寫和維護
-9. **教學** - 培訓和知識分享
-10. **翻譯** - 多語言本地化工作
-11. **其他** - 其他類型的工作
+### Activities (Time Tracking)
+1. **Design** - System design and planning (default)
+2. **Development** - Programming and coding
+3. **Debug** - Program bug fixes
+4. **Investigation** - Problem analysis and research
+5. **Discussion** - Meetings and technical discussions
+6. **Testing** - Testing and quality assurance
+7. **Maintenance** - System maintenance and support
+8. **Documentation** - Documentation writing and maintenance
+9. **Teaching** - Training and knowledge sharing
+10. **Translation** - Multilingual localization work
+11. **Other** - Other types of work
 
-### 文件分類
-1. **使用手冊** - 使用者操作手冊和說明（預設）
-2. **技術文件** - 技術規格和設計文件
-3. **申請表單** - 各種申請和表單文件
-4. **需求文件** - 系統需求和功能說明
+### Document Categories
+1. **User Manual** - User operation manual and instructions (default)
+2. **Technical Documentation** - Technical specifications and design documents
+3. **Application Forms** - Various applications and form documents
+4. **Requirements Documents** - System requirements and feature descriptions
 
-## 實施的更新
+## Implemented Updates
 
-### 1. 設定指南更新
-- ✅ 更新 `docs/manuals/redmine_setup_guide.md` 中的建議設定
-- ✅ 將優先級名稱更新為實際使用的格式
-- ✅ 擴展時間追蹤活動列表，加入更多實用的活動類型
-- ✅ 調整文件分類為更實用的分類方式
+### 1. Setup Guide Update
+- ✅ Updated recommended settings in `docs/manuals/redmine_setup_guide.md`
+- ✅ Updated priority names to actual used formats
+- ✅ Expanded time tracking activity list, adding more practical activity types
+- ✅ Adjusted document categories to more practical classification methods
 
-### 2. 測試資料對齊
-- ✅ 更新測試檔案中的 mock 資料以反映實際設定
-- ✅ 確保測試涵蓋所有實際使用的枚舉值
-- ✅ 驗證測試通過，確保功能正常
+### 2. Test Data Alignment
+- ✅ Updated mock data in test files to reflect actual settings
+- ✅ Ensured tests cover all actual used enumeration values
+- ✅ Verified tests pass to ensure functionality is normal
 
-### 3. 設定建議優化
-- 優先級命名加入了明確的處理時間指示
-- 時間追蹤活動更全面，涵蓋軟體開發的各個階段
-- 文件分類更貼近實際業務需求
+### 3. Setup Recommendation Optimization
+- Priority naming added clear handling time indicators
+- Time tracking activities are more comprehensive, covering various stages of software development
+- Document categories are closer to actual business needs
 
-## 影響
+## Impact
 
-### 正面影響
-- 設定指南更貼近實際使用場景
-- 用戶可以直接參考建議來設定系統
-- 測試資料更真實，提高測試的代表性
+### Positive Impact
+- Setup guide is closer to actual usage scenarios
+- Users can directly reference recommendations to configure the system
+- Test data is more realistic, improving test representativeness
 
-### 學習價值
-- 了解實際 Redmine 使用者的需求和習慣
-- 驗證了我們的 MCP 工具可以正確處理各種枚舉值格式
-- 提供了更實用的設定範例
+### Learning Value
+- Understanding actual Redmine user needs and habits
+- Verified that our MCP tools can correctly handle various enumeration value formats
+- Provided more practical configuration examples
 
-## 相關改動檔案
+## Related Modified Files
 
-- `/docs/manuals/redmine_setup_guide.md` - 設定指南
-- `/tests/integration/test_mcp_tools.py` - 測試資料
-- `/docs/issues/issue_enumeration_alignment.md` - 此記錄檔案
+- `/docs/manuals/redmine_setup_guide.md` - Setup guide
+- `/tests/integration/test_mcp_tools.py` - Test data
+- `/docs/issues/issue_enumeration_alignment.md` - This record file
 
-## 狀態
+## Status
 
-✅ **已完成** - 所有枚舉值設定已與實際 Redmine 系統對齊
+✅ **Completed** - All enumeration value configurations have been aligned with the actual Redmine system
 
-## 建議
+## Recommendations
 
-### 未來改進
-1. 考慮在文件中加入「常見設定範例」章節
-2. 提供不同行業/用途的枚舉值設定模板
-3. 建立設定檢查工具，驗證枚舉值的完整性
+### Future Improvements
+1. Consider adding a "Common Configuration Examples" section to the documentation
+2. Provide enumeration value configuration templates for different industries/uses
+3. Build configuration check tools to verify enumeration value completeness
 
-### 維護要點
-- 定期更新設定指南以反映最佳實踐
-- 保持測試資料與實際使用情況的一致性
-- 收集更多實際使用者的設定案例作為參考
+### Maintenance Points
+- Regularly update setup guide to reflect best practices
+- Maintain consistency between test data and actual usage
+- Collect more actual user configuration cases as references
 
-## 經驗總結
+## Lessons Learned
 
-1. **實際使用者回饋很寶貴**：真實的使用場景提供了最好的設定參考
-2. **命名慣例很重要**：實際的優先級命名（如「速-這兩天處理」）比抽象的命名更實用
-3. **完整性考量**：時間追蹤活動需要涵蓋開發流程的各個階段
-4. **業務導向**：文件分類應該反映實際的業務需求而非技術分類
+1. **Actual user feedback is valuable**: Real usage scenarios provide the best configuration references
+2. **Naming conventions are important**: Actual priority naming (e.g., "Urgent - Handle within two days") is more practical than abstract naming
+3. **Completeness considerations**: Time tracking activities need to cover various stages of the development process
+4. **Business-oriented**: Document categories should reflect actual business needs rather than technical classifications
 
-這次對齊讓我們的 MCP 工具更貼近實際使用場景，提高了實用性和用戶體驗。
+This alignment makes our MCP tools closer to actual usage scenarios, improving practicality and user experience.

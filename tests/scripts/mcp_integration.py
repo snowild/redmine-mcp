@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-完整的 MCP 功能測試腳本
-使用本地 Redmine 環境測試所有 MCP 工具
+Complete MCP functionality test script
+Test all MCP tools using local Redmine environment
 """
 
 import sys
@@ -10,7 +10,7 @@ import time
 import requests
 from typing import List, Dict, Any
 
-# 添加 src 目錄到路徑（從 tests/scripts 往上兩層到根目錄）
+# Add src directory to path (go up two levels from tests/scripts to root)
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
 
 from redmine_mcp.server import (
@@ -22,7 +22,7 @@ from redmine_mcp.server import (
 
 
 class MCPTester:
-    """MCP 功能測試器"""
+    """MCP functionality tester"""
     
     def __init__(self):
         self.test_results = []
@@ -30,7 +30,7 @@ class MCPTester:
         self.project_id = None
         
     def log_test(self, test_name: str, success: bool, message: str = ""):
-        """記錄測試結果"""
+        """Log test results"""
         status = "✅" if success else "❌"
         print(f"{status} {test_name}: {message}")
         self.test_results.append({
@@ -40,84 +40,84 @@ class MCPTester:
         })
     
     def test_basic_functions(self):
-        """測試基本功能"""
-        print("\n📋 測試基本功能...")
+        """Test basic functions"""
+        print("\n📋 Testing basic functions...")
         
-        # 測試服務器資訊
+        # Test server info
         try:
             result = server_info()
-            self.log_test("服務器資訊", "Redmine MCP" in result, f"取得: {result[:50]}...")
+            self.log_test("Server info", "Redmine MCP" in result, f"Got: {result[:50]}...")
         except Exception as e:
-            self.log_test("服務器資訊", False, f"錯誤: {e}")
+            self.log_test("Server info", False, f"Error: {e}")
         
-        # 測試健康檢查
+        # Test health check
         try:
             result = health_check()
-            success = "正常運作" in result or "已連接" in result
-            self.log_test("健康檢查", success, f"狀態: {result[:50]}...")
+            success = "functioning normally" in result or "connected" in result
+            self.log_test("Health check", success, f"Status: {result[:50]}...")
         except Exception as e:
-            self.log_test("健康檢查", False, f"錯誤: {e}")
+            self.log_test("Health check", False, f"Error: {e}")
     
     def test_query_functions(self):
-        """測試查詢功能"""
-        print("\n🔍 測試查詢功能...")
+        """Test query functions"""
+        print("\n🔍 Testing query functions...")
         
-        # 測試取得專案列表
+        # Test getting project list
         try:
             result = get_projects()
-            success = "找到" in result and "專案" in result
-            self.log_test("取得專案列表", success, f"結果: {result[:50]}...")
+            success = "Projects" in result
+            self.log_test("Get project list", success, f"Result: {result[:50]}...")
             
-            # 從結果中解析專案 ID
+            # Parse project ID from result
             if success:
                 import re
                 id_match = re.search(r'(\d+)\s+[a-z-]+\s+', result)
                 if id_match:
                     self.project_id = int(id_match.group(1))
-                    print(f"  📝 找到測試專案 ID: {self.project_id}")
+                    print(f"  📝 Found test project ID: {self.project_id}")
         except Exception as e:
-            self.log_test("取得專案列表", False, f"錯誤: {e}")
+            self.log_test("Get project list", False, f"Error: {e}")
         
-        # 測試取得議題狀態
+        # Test getting issue statuses
         try:
             result = get_issue_statuses()
-            success = "可用的議題狀態" in result
-            self.log_test("取得議題狀態", success, f"結果: {result[:50]}...")
+            success = "Available issue statuses" in result
+            self.log_test("Get issue statuses", success, f"Result: {result[:50]}...")
         except Exception as e:
-            self.log_test("取得議題狀態", False, f"錯誤: {e}")
+            self.log_test("Get issue statuses", False, f"Error: {e}")
         
-        # 測試列出專案議題
+        # Test listing project issues
         if self.project_id:
             try:
                 result = list_project_issues(self.project_id)
-                success = "找到" in result or "沒有找到" in result  # 兩種都是正常結果
-                self.log_test("列出專案議題", success, f"結果: {result[:50]}...")
+                success = "turn up" in result or "No matching issues were found" in result  # Both are normal results
+                self.log_test("List project issues", success, f"Result: {result[:50]}...")
                 
-                # 從結果中解析議題 ID
-                if "找到" in result:
+                # Parse issue ID from result
+                if "turn up" in result:
                     import re
                     id_matches = re.findall(r'^(\d+)\s+', result, re.MULTILINE)
                     if id_matches:
                         first_issue_id = int(id_matches[0])
-                        print(f"  📝 找到議題 ID: {first_issue_id}")
+                        print(f"  📝 Found issue ID: {first_issue_id}")
                         return first_issue_id
             except Exception as e:
-                self.log_test("列出專案議題", False, f"錯誤: {e}")
+                self.log_test("List project issues", False, f"Error: {e}")
         
         return None
     
     def test_create_functions(self):
-        """測試建立功能"""
-        print("\n➕ 測試建立功能...")
+        """Test create functions"""
+        print("\n➕ Testing create functions...")
         
         if not self.project_id:
-            self.log_test("建立新議題", False, "沒有有效的專案 ID")
+            self.log_test("Create new issue", False, "No valid project ID")
             return None
         
-        # 測試建立新議題
+        # Test creating new issue
         try:
-            subject = f"MCP 測試議題 - {int(time.time())}"
-            description = "這是由 MCP 自動測試腳本建立的測試議題"
+            subject = f"MCP test issue - {int(time.time())}"
+            description = "This is a test issue created by MCP automated test script"
             
             result = create_new_issue(
                 self.project_id, 
@@ -125,177 +125,177 @@ class MCPTester:
                 description
             )
             
-            success = "新議題建立成功" in result
-            self.log_test("建立新議題", success, f"結果: {result[:50]}...")
+            success = "New topic created successfully" in result
+            self.log_test("Create new issue", success, f"Result: {result[:50]}...")
             
             if success:
-                # 解析議題 ID
+                # Parse issue ID
                 import re
-                id_match = re.search(r'議題 ID: #(\d+)', result)
+                id_match = re.search(r'Issue ID: #(\d+)', result)
                 if id_match:
                     issue_id = int(id_match.group(1))
                     self.created_issues.append(issue_id)
-                    print(f"  📝 建立的議題 ID: {issue_id}")
+                    print(f"  📝 Created issue ID: {issue_id}")
                     return issue_id
         except Exception as e:
-            self.log_test("建立新議題", False, f"錯誤: {e}")
+            self.log_test("Create new issue", False, f"Error: {e}")
         
         return None
     
     def test_update_functions(self, issue_id: int):
-        """測試更新功能"""
-        print("\n✏️  測試更新功能...")
+        """Test update functions"""
+        print("\n✏️  Testing update functions...")
         
-        # 測試取得議題詳細資訊
+        # Test getting issue details
         try:
             result = get_issue(issue_id)
-            success = f"議題 #{issue_id}" in result
-            self.log_test("取得議題詳細資訊", success, f"結果: {result[:50]}...")
+            success = f"#issue#{issue_id}" in result
+            self.log_test("Get issue details", success, f"Result: {result[:50]}...")
         except Exception as e:
-            self.log_test("取得議題詳細資訊", False, f"錯誤: {e}")
+            self.log_test("Get issue details", False, f"Error: {e}")
         
-        # 測試更新議題內容
+        # Test updating issue content
         try:
-            new_subject = f"已更新的 MCP 測試議題 - {int(time.time())}"
+            new_subject = f"Updated MCP test issue - {int(time.time())}"
             result = update_issue_content(
                 issue_id, 
                 subject=new_subject,
-                description="描述已由 MCP 更新",
+                description="Description updated by MCP",
                 done_ratio=25
             )
-            success = "議題內容更新成功" in result
-            self.log_test("更新議題內容", success, f"結果: {result[:50]}...")
+            success = "Topic content updated successfully" in result
+            self.log_test("Update issue content", success, f"Result: {result[:50]}...")
         except Exception as e:
-            self.log_test("更新議題內容", False, f"錯誤: {e}")
+            self.log_test("Update issue content", False, f"Error: {e}")
         
-        # 測試新增議題備註
+        # Test adding issue note
         try:
-            result = add_issue_note(issue_id, "這是 MCP 自動測試新增的備註", private=False)
-            success = "備註新增成功" in result
-            self.log_test("新增議題備註", success, f"結果: {result[:50]}...")
+            result = add_issue_note(issue_id, "This is a note added by MCP automated test", private=False)
+            success = "Note added successfully" in result
+            self.log_test("Add issue note", success, f"Result: {result[:50]}...")
         except Exception as e:
-            self.log_test("新增議題備註", False, f"錯誤: {e}")
+            self.log_test("Add issue note", False, f"Error: {e}")
         
-        # 測試更新議題狀態
+        # Test updating issue status
         try:
-            result = update_issue_status(issue_id, 2, "狀態由 MCP 自動測試更新")
-            success = "議題狀態更新成功" in result or "找不到" in result  # 狀態 ID 可能不存在
-            self.log_test("更新議題狀態", success, f"結果: {result[:50]}...")
+            result = update_issue_status(issue_id, 2, "Status updated by MCP automated test")
+            success = "Issue status updated successfully" in result or "not found" in result.lower()  # Status ID may not exist
+            self.log_test("Update issue status", success, f"Result: {result[:50]}...")
         except Exception as e:
-            self.log_test("更新議題狀態", False, f"錯誤: {e}")
+            self.log_test("Update issue status", False, f"Error: {e}")
     
     def test_search_functions(self):
-        """測試搜尋功能"""
-        print("\n🔎 測試搜尋功能...")
+        """Test search functions"""
+        print("\n🔎 Testing search functions...")
         
-        # 測試搜尋議題
+        # Test searching issues
         try:
             result = search_issues("MCP", limit=5)
-            success = "搜尋關鍵字" in result
-            self.log_test("搜尋議題", success, f"結果: {result[:50]}...")
+            success = "Search keyword" in result
+            self.log_test("Search issues", success, f"Result: {result[:50]}...")
         except Exception as e:
-            self.log_test("搜尋議題", False, f"錯誤: {e}")
+            self.log_test("Search issues", False, f"Error: {e}")
         
-        # 測試取得我的議題
+        # Test getting my issues
         try:
             result = get_my_issues("all", 10)
-            success = "的議題" in result or "沒有找到" in result
-            self.log_test("取得我的議題", success, f"結果: {result[:50]}...")
+            success = "assigned to" in result.lower() or "Topics" in result
+            self.log_test("Get my issues", success, f"Result: {result[:50]}...")
         except Exception as e:
-            self.log_test("取得我的議題", False, f"錯誤: {e}")
+            self.log_test("Get my issues", False, f"Error: {e}")
     
     def test_close_functions(self, issue_id: int):
-        """測試關閉功能"""
-        print("\n🔒 測試關閉功能...")
+        """Test close functions"""
+        print("\n🔒 Testing close functions...")
         
-        # 測試關閉議題
+        # Test closing issue
         try:
-            result = close_issue(issue_id, "議題由 MCP 自動測試關閉", 100)
-            success = "議題關閉成功" in result or "找不到" in result
-            self.log_test("關閉議題", success, f"結果: {result[:50]}...")
+            result = close_issue(issue_id, "Issue closed by MCP automated test", 100)
+            success = "Issue closed successfully" in result or "not found" in result.lower()
+            self.log_test("Close issue", success, f"Result: {result[:50]}...")
         except Exception as e:
-            self.log_test("關閉議題", False, f"錯誤: {e}")
+            self.log_test("Close issue", False, f"Error: {e}")
     
     def cleanup_test_data(self):
-        """清理測試資料"""
-        print("\n🧹 清理測試資料...")
+        """Clean up test data"""
+        print("\n🧹 Cleaning up test data...")
         
-        # 注意：這裡只是記錄，實際清理需要 DELETE API
+        # Note: This just logs, actual cleanup requires DELETE API
         if self.created_issues:
-            print(f"  📝 建立的測試議題: {self.created_issues}")
-            print("  ℹ️  如需清理，請手動刪除或關閉這些議題")
+            print(f"  📝 Created test issues: {self.created_issues}")
+            print("  ℹ️  To clean up, please manually delete or close these issues")
     
     def run_all_tests(self):
-        """執行所有測試"""
-        print("🚀 開始 MCP 功能整合測試")
+        """Run all tests"""
+        print("🚀 Starting MCP functionality integration test")
         print("=" * 50)
         
-        # 檢查環境
+        # Check environment
         if not os.getenv('REDMINE_DOMAIN') or not os.getenv('REDMINE_API_KEY'):
-            print("❌ 環境變數未設定，請先執行 configure_redmine.py")
+            print("❌ Environment variables not set, please run configure_redmine.py first")
             return False
         
-        # 基本功能測試
+        # Basic functionality test
         self.test_basic_functions()
         
-        # 查詢功能測試
+        # Query functionality test
         existing_issue_id = self.test_query_functions()
         
-        # 建立功能測試
+        # Create functionality test
         new_issue_id = self.test_create_functions()
         
-        # 更新功能測試
+        # Update functionality test
         test_issue_id = new_issue_id or existing_issue_id
         if test_issue_id:
             self.test_update_functions(test_issue_id)
         
-        # 搜尋功能測試
+        # Search functionality test
         self.test_search_functions()
         
-        # 關閉功能測試
+        # Close functionality test
         if new_issue_id:
             self.test_close_functions(new_issue_id)
         
-        # 清理測試資料
+        # Clean up test data
         self.cleanup_test_data()
         
-        # 統計結果
+        # Statistics
         self.print_summary()
         
-        # 回傳成功率
+        # Return success rate
         passed = sum(1 for r in self.test_results if r['success'])
         total = len(self.test_results)
-        return passed / total > 0.8  # 80% 通過率視為成功
+        return passed / total > 0.8  # 80% pass rate considered success
     
     def print_summary(self):
-        """列印測試摘要"""
+        """Print test summary"""
         print("\n" + "=" * 50)
-        print("📊 測試結果摘要")
+        print("📊 Test Result Summary")
         print("=" * 50)
         
         passed = sum(1 for r in self.test_results if r['success'])
         failed = len(self.test_results) - passed
         success_rate = (passed / len(self.test_results)) * 100 if self.test_results else 0
         
-        print(f"總測試數: {len(self.test_results)}")
-        print(f"通過: {passed}")
-        print(f"失敗: {failed}")
-        print(f"成功率: {success_rate:.1f}%")
+        print(f"Total tests: {len(self.test_results)}")
+        print(f"Passed: {passed}")
+        print(f"Failed: {failed}")
+        print(f"Success rate: {success_rate:.1f}%")
         
         if failed > 0:
-            print("\n❌ 失敗的測試:")
+            print("\n❌ Failed tests:")
             for result in self.test_results:
                 if not result['success']:
                     print(f"  - {result['name']}: {result['message']}")
         
         if success_rate >= 80:
-            print("\n🎉 測試通過！MCP 功能運作正常")
+            print("\n🎉 Test passed! MCP functionality working normally")
         else:
-            print("\n⚠️  部分測試失敗，請檢查上述錯誤")
+            print("\n⚠️  Some tests failed, please check the errors above")
 
 
 def main():
-    """主函數"""
+    """Main function"""
     tester = MCPTester()
     success = tester.run_all_tests()
     return success

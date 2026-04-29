@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-手動 API 金鑰設置和測試腳本
-當自動配置失敗時使用此腳本
+Manual API key setup and testing script
+Use this script when automatic configuration fails
 """
 
 import requests
@@ -10,8 +10,8 @@ import sys
 import os
 
 def test_api_connection(api_key: str, domain: str = "http://localhost:3000") -> bool:
-    """測試 API 連接"""
-    print(f"🔍 測試 API 金鑰: {api_key[:8]}...")
+    """Test API connection"""
+    print(f"🔍 Testing API key: {api_key[:8]}...")
     
     headers = {
         'X-Redmine-API-Key': api_key,
@@ -19,33 +19,33 @@ def test_api_connection(api_key: str, domain: str = "http://localhost:3000") -> 
     }
     
     try:
-        # 測試取得專案列表
+        # Test getting project list
         response = requests.get(f"{domain}/projects.json", headers=headers, timeout=10)
-        print(f"📡 API 回應狀態: {response.status_code}")
+        print(f"📡 API response status: {response.status_code}")
         
         if response.status_code == 200:
             data = response.json()
             project_count = len(data.get('projects', []))
-            print(f"✅ API 連接成功，找到 {project_count} 個專案")
+            print(f"✅ API connection successful, found {project_count} projects")
             return True
         elif response.status_code == 401:
-            print("❌ API 金鑰無效 (401 Unauthorized)")
+            print("❌ Invalid API key (401 Unauthorized)")
         elif response.status_code == 403:
-            print("❌ API 存取被禁止 (403 Forbidden)")
+            print("❌ API access forbidden (403 Forbidden)")
         elif response.status_code == 422:
-            print("❌ API 格式錯誤 (422 Unprocessable Entity)")
+            print("❌ API format error (422 Unprocessable Entity)")
         else:
-            print(f"❌ API 請求失敗: {response.status_code}")
-            print(f"回應內容: {response.text[:200]}...")
+            print(f"❌ API request failed: {response.status_code}")
+            print(f"Response content: {response.text[:200]}...")
             
     except requests.exceptions.RequestException as e:
-        print(f"❌ 網路錯誤: {e}")
+        print(f"❌ Network error: {e}")
     
     return False
 
 def create_test_project(api_key: str, domain: str = "http://localhost:3000") -> bool:
-    """建立測試專案"""
-    print("📁 嘗試建立測試專案...")
+    """Create test project"""
+    print("📁 Trying to create test project...")
     
     headers = {
         'X-Redmine-API-Key': api_key,
@@ -54,34 +54,34 @@ def create_test_project(api_key: str, domain: str = "http://localhost:3000") -> 
     
     project_data = {
         'project': {
-            'name': '手動測試專案',
+            'name': 'Manual Test Project',
             'identifier': 'manual-test',
-            'description': '手動建立的測試專案',
+            'description': 'Manually created test project',
             'is_public': True
         }
     }
     
     try:
         response = requests.post(f"{domain}/projects.json", headers=headers, json=project_data, timeout=10)
-        print(f"📡 建立專案回應: {response.status_code}")
+        print(f"📡 Create project response: {response.status_code}")
         
         if response.status_code == 201:
             data = response.json()
             project_id = data['project']['id']
-            print(f"✅ 測試專案建立成功 (ID: {project_id})")
+            print(f"✅ Test project created successfully (ID: {project_id})")
             return True
         else:
-            print(f"❌ 專案建立失敗: {response.status_code}")
-            print(f"回應內容: {response.text[:200]}...")
+            print(f"❌ Project creation failed: {response.status_code}")
+            print(f"Response content: {response.text[:200]}...")
             
     except requests.exceptions.RequestException as e:
-        print(f"❌ 網路錯誤: {e}")
+        print(f"❌ Network error: {e}")
     
     return False
 
 def update_env_file(api_key: str):
-    """更新 .env 檔案"""
-    env_content = f"""# Redmine MCP 測試環境配置
+    """Update .env file"""
+    env_content = f"""# Redmine MCP test environment configuration
 REDMINE_DOMAIN=http://localhost:3000
 REDMINE_API_KEY={api_key}
 REDMINE_TIMEOUT=30
@@ -91,49 +91,49 @@ DEBUG_MODE=true
     with open('.env', 'w') as f:
         f.write(env_content)
     
-    print("✅ .env 檔案已更新")
+    print("✅ .env file updated")
 
 def main():
-    print("🔧 手動 API 金鑰設置工具")
+    print("🔧 Manual API Key Setup Tool")
     print("=" * 40)
     
-    # 檢查是否提供 API 金鑰
+    # Check if API key is provided
     if len(sys.argv) < 2:
-        print("使用方法:")
+        print("Usage:")
         print("  python manual_api_setup.py <API_KEY>")
         print("")
-        print("請手動取得 API 金鑰:")
-        print("1. 開啟瀏覽器前往: http://localhost:3000")
-        print("2. 使用 admin/admin 登入")
-        print("3. 前往「我的帳戶」")
-        print("4. 找到「API 存取金鑰」區塊")
-        print("5. 如果沒有金鑰，點選「重設」按鈕")
-        print("6. 複製金鑰並執行:")
-        print("   python manual_api_setup.py <你的API金鑰>")
+        print("Please obtain API key manually:")
+        print("1. Open browser and go to: http://localhost:3000")
+        print("2. Log in with admin/admin")
+        print("3. Go to My Account")
+        print("4. Find the API Access Key section")
+        print("5. If no key exists, click the Reset button")
+        print("6. Copy the key and run:")
+        print("   python manual_api_setup.py <your_api_key>")
         return False
     
     api_key = sys.argv[1].strip()
     
-    # 驗證 API 金鑰格式
+    # Validate API key format
     if len(api_key) != 40 or not all(c in '0123456789abcdef' for c in api_key.lower()):
-        print("⚠️  API 金鑰格式不正確，應該是 40 位 16 進位字串")
+        print("⚠️  API key format is incorrect, should be a 40-character hexadecimal string")
         return False
     
-    print(f"🔑 使用 API 金鑰: {api_key[:8]}...")
+    print(f"🔑 Using API key: {api_key[:8]}...")
     
-    # 測試 API 連接
+    # Test API connection
     if not test_api_connection(api_key):
-        print("❌ API 連接測試失敗")
+        print("❌ API connection test failed")
         return False
     
-    # 嘗試建立測試專案
+    # Try to create test project
     create_test_project(api_key)
     
-    # 更新環境檔案
+    # Update environment file
     update_env_file(api_key)
     
-    print("\n🎉 設定完成！")
-    print("接下來可以執行:")
+    print("\n🎉 Setup complete!")
+    print("You can now run:")
     print("  uv run python test_mcp_integration.py")
     
     return True

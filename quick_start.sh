@@ -1,76 +1,76 @@
 #!/bin/bash
 #
-# Redmine MCP 快速啟動腳本
+# Redmine MCP quick start script
 # ============================
 # 
-# 這個腳本會自動執行以下步驟：
-# 1. 檢查 Docker 環境
-# 2. 啟動 Redmine 測試環境 (http://localhost:3000)
-# 3. 建立測試專案和 API 金鑰
-# 4. 執行完整的 MCP 功能測試
+# This script automatically performs the following steps:
+# 1. Check Docker environment
+# 2. Start Redmine test environment (http://localhost:3000)
+# 3. Create test projects and API key
+# 4. Run full MCP functionality tests
 #
-# 適用場景：
-# - 新開發者第一次設定環境
-# - 發布前的完整功能驗證
-# - CI/CD 自動化測試
-# - 環境重置後的驗證
+# Use cases:
+# - First-time environment setup for new developers
+# - Complete functionality verification before release
+# - CI/CD automated testing
+# - Verification after environment reset
 #
-# 執行時間：約 2-3 分鐘
-# 前置需求：Docker, Docker Compose, uv
+# Execution time: approximately 2-3 minutes
+# Prerequisites: Docker, Docker Compose, uv
 
-echo "🚀 Redmine MCP 快速啟動"
+echo "🚀 Redmine MCP Quick Start"
 echo "=" * 50
 
-# 檢查 Docker 是否安裝
+# Check if Docker is installed
 if ! command -v docker &> /dev/null; then
-    echo "❌ Docker 未安裝，請先安裝 Docker"
+    echo "❌ Docker is not installed, please install Docker first"
     exit 1
 fi
 
 if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
-    echo "❌ Docker Compose 未安裝，請先安裝 Docker Compose"
+    echo "❌ Docker Compose is not installed, please install Docker Compose first"
     exit 1
 fi
 
-echo "✅ Docker 環境檢查通過"
+echo "✅ Docker environment check passed"
 
-# 步驟 1: 啟動 Redmine
+# Step 1: Start Redmine
 echo ""
-echo "🚀 步驟 1: 啟動 Redmine 環境"
+echo "🚀 Step 1: Start Redmine environment"
 echo "----------------------------------------"
 ./redmine/scripts/setup.sh
 
-# 步驟 2: 配置 Redmine
+# Step 2: Configure Redmine
 echo ""
-echo "🔧 步驟 2: 配置 Redmine 測試資料"
+echo "🔧 Step 2: Configure Redmine test data"
 echo "----------------------------------------"
 uv run python redmine/scripts/configure.py
 
 if [ $? -ne 0 ]; then
-    echo "❌ Redmine 配置失敗"
+    echo "❌ Redmine configuration failed"
     exit 1
 fi
 
-# 步驟 3: 測試 MCP 整合
+# Step 3: Test MCP integration
 echo ""
-echo "🧪 步驟 3: 執行 MCP 功能測試"
+echo "🧪 Step 3: Run MCP functionality tests"
 echo "----------------------------------------"
 uv run python tests/scripts/mcp_integration.py
 
 if [ $? -eq 0 ]; then
     echo ""
-    echo "🎉 所有測試完成！"
+    echo "🎉 All tests completed!"
     echo "----------------------------------------"
-    echo "✅ Redmine 環境已啟動: http://localhost:3000"
-    echo "✅ MCP 功能測試通過"
-    echo "✅ 環境已準備好進行開發和測試"
+    echo "✅ Redmine environment started: http://localhost:3000"
+    echo "✅ MCP functionality tests passed"
+    echo "✅ Environment is ready for development and testing"
     echo ""
-    echo "💡 接下來可以:"
-    echo "   - 在 Claude Code 中配置並測試 MCP 工具"
-    echo "   - 繼續開發新的 MCP 功能"
-    echo "   - 執行 'cd redmine/docker && docker-compose down' 關閉測試環境"
+    echo "💡 Next steps:"
+    echo "   - Configure and test MCP tools in Claude Code"
+    echo "   - Continue developing new MCP features"
+    echo "   - Run 'cd redmine/docker && docker-compose down' to shut down the test environment"
 else
     echo ""
-    echo "❌ MCP 測試失敗，請檢查上述錯誤訊息"
+    echo "❌ MCP tests failed, please check the error messages above"
     exit 1
 fi

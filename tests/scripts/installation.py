@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-測試安裝的 redmine-mcp 套件
+Test installed redmine-mcp package
 """
 
 import subprocess
@@ -10,82 +10,82 @@ import json
 from pathlib import Path
 
 def test_package_import():
-    """測試套件導入"""
-    print("📦 測試套件導入...")
+    """Test package import"""
+    print("📦 Testing package import...")
     try:
         import redmine_mcp
         from redmine_mcp.server import mcp
         from redmine_mcp.config import get_config
         from redmine_mcp.redmine_client import get_client
-        print("✅ 套件導入成功")
+        print("✅ Package import successful")
         return True
     except ImportError as e:
-        print(f"❌ 套件導入失敗: {e}")
+        print(f"❌ Package import failed: {e}")
         return False
 
 def test_command_availability():
-    """測試命令是否可用"""
-    print("\n🔧 測試命令可用性...")
+    """Test if command is available"""
+    print("\n🔧 Testing command availability...")
     
-    # 檢查 uv tool 安裝的命令
+    # Check uv tool installed command
     uv_bin_path = Path.home() / ".local" / "bin" / "redmine-mcp"
     if uv_bin_path.exists():
-        print(f"✅ 找到 uv tool 安裝的命令: {uv_bin_path}")
+        print(f"✅ Found uv tool installed command: {uv_bin_path}")
         return True
     
-    # 檢查系統 PATH 中的命令
+    # Check system PATH command
     try:
         result = subprocess.run(["which", "redmine-mcp"], 
                               capture_output=True, text=True, timeout=5)
         if result.returncode == 0:
-            print(f"✅ 找到系統 PATH 中的命令: {result.stdout.strip()}")
+            print(f"✅ Found system PATH command: {result.stdout.strip()}")
             return True
     except subprocess.TimeoutExpired:
         pass
     except FileNotFoundError:
         pass
     
-    print("❌ 未找到 redmine-mcp 命令")
+    print("❌ redmine-mcp command not found")
     return False
 
 def test_mcp_server_startup():
-    """測試 MCP 服務器啟動"""
-    print("\n🚀 測試 MCP 服務器啟動...")
+    """Test MCP server startup"""
+    print("\n🚀 Testing MCP server startup...")
     
-    # 使用本地模組測試
+    # Use local module test
     try:
-        # 設定測試環境變數
+        # Set test environment variables
         os.environ["REDMINE_DOMAIN"] = "https://test.example.com"
         os.environ["REDMINE_API_KEY"] = "test_key_12345"
         
-        # 導入並測試服務器
+        # Import and test server
         from redmine_mcp.server import mcp
         
-        # 檢查 MCP 實例是否正確建立
+        # Check if MCP instance is created correctly
         if mcp:
-            print("✅ MCP 服務器實例建立成功")
+            print("✅ MCP server instance created successfully")
             
-            # 簡單檢查 - 確認可以導入工具函數
+            # Simple check - confirm tool functions can be imported
             try:
                 from redmine_mcp.server import server_info, health_check, get_issue
-                print("✅ 核心工具函數可以正常導入")
+                print("✅ Core tool functions can be imported normally")
                 return True
             except ImportError as ie:
-                print(f"⚠️  工具函數導入失敗: {ie}")
-                print("✅ MCP 服務器實例建立成功（但工具導入有問題）")
+                print(f"⚠️  Tool function import failed: {ie}")
+                print("✅ MCP server instance created successfully (but tool import has issues)")
                 return True
             
     except Exception as e:
-        print(f"❌ MCP 服務器啟動失敗: {e}")
+        print(f"❌ MCP server startup failed: {e}")
         import traceback
         traceback.print_exc()
         return False
 
 def test_config_loading():
-    """測試配置載入"""
-    print("\n⚙️ 測試配置載入...")
+    """Test configuration loading"""
+    print("\n⚙️ Testing configuration loading...")
     try:
-        # 設定測試環境變數
+        # Set test environment variables
         os.environ["REDMINE_DOMAIN"] = "https://test.example.com"
         os.environ["REDMINE_API_KEY"] = "test_key_12345"
         os.environ["DEBUG_MODE"] = "true"
@@ -93,7 +93,7 @@ def test_config_loading():
         from redmine_mcp.config import get_config
         config = get_config()
         
-        print(f"✅ 配置載入成功")
+        print(f"✅ Configuration loaded successfully")
         print(f"   - Domain: {config.redmine_domain}")
         print(f"   - API Key: {config.redmine_api_key[:10]}...")
         print(f"   - Debug: {config.debug_mode}")
@@ -101,38 +101,38 @@ def test_config_loading():
         
         return True
     except Exception as e:
-        print(f"❌ 配置載入失敗: {e}")
+        print(f"❌ Configuration loading failed: {e}")
         return False
 
 def test_package_info():
-    """測試套件資訊"""
-    print("\n📋 測試套件資訊...")
+    """Test package information"""
+    print("\n📋 Testing package information...")
     try:
         import redmine_mcp
         
-        # 檢查版本
+        # Check version
         if hasattr(redmine_mcp, '__version__'):
-            print(f"✅ 套件版本: {redmine_mcp.__version__}")
+            print(f"✅ Package version: {redmine_mcp.__version__}")
         else:
-            print("⚠️  套件版本資訊不可用")
+            print("⚠️  Package version information not available")
         
-        # 檢查模組
+        # Check modules
         modules = ['server', 'config', 'redmine_client', 'validators']
         for module in modules:
             try:
                 __import__(f'redmine_mcp.{module}')
-                print(f"✅ 模組 {module} 可用")
+                print(f"✅ Module {module} available")
             except ImportError:
-                print(f"❌ 模組 {module} 不可用")
+                print(f"❌ Module {module} not available")
         
         return True
     except Exception as e:
-        print(f"❌ 套件資訊檢查失敗: {e}")
+        print(f"❌ Package information check failed: {e}")
         return False
 
 def main():
-    """主要測試流程"""
-    print("🧪 Redmine MCP 安裝測試")
+    """Main test flow"""
+    print("🧪 Redmine MCP Installation Test")
     print("=" * 50)
     
     tests = [
@@ -150,18 +150,18 @@ def main():
         if test():
             passed += 1
     
-    print(f"\n📊 測試結果摘要")
+    print(f"\n📊 Test Result Summary")
     print("=" * 50)
-    print(f"總測試數: {total}")
-    print(f"通過: {passed}")
-    print(f"失敗: {total - passed}")
-    print(f"成功率: {(passed/total)*100:.1f}%")
+    print(f"Total tests: {total}")
+    print(f"Passed: {passed}")
+    print(f"Failed: {total - passed}")
+    print(f"Success rate: {(passed/total)*100:.1f}%")
     
     if passed == total:
-        print("\n🎉 所有測試通過！套件安裝成功")
+        print("\n🎉 All tests passed! Package installed successfully")
         return 0
     else:
-        print(f"\n⚠️  有 {total - passed} 個測試失敗")
+        print(f"\n⚠️  {total - passed} test(s) failed")
         return 1
 
 if __name__ == "__main__":

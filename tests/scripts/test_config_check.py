@@ -1,97 +1,97 @@
 #!/usr/bin/env python3
 """
-檢查 redmine-mcp 配置和環境設定
+Check redmine-mcp configuration and environment setup
 """
 
 import sys
 import os
 from pathlib import Path
 
-# 添加 src 到 Python 路徑
+# Add src to Python path
 project_root = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(project_root / "src"))
 
 
 def check_configuration():
-    """檢查配置是否正確"""
-    print("🔧 檢查 redmine-mcp 配置")
+    """Check if configuration is correct"""
+    print("🔧 Checking redmine-mcp configuration")
     print("=" * 50)
     
-    # 檢查環境變數
-    print("1️⃣ 檢查環境變數...")
+    # Check environment variables
+    print("1️⃣ Checking environment variables...")
     
     required_vars = {
-        'REDMINE_DOMAIN': '必要 - Redmine 伺服器網址',
-        'REDMINE_API_KEY': '必要 - Redmine API 金鑰'
+        'REDMINE_DOMAIN': 'Required - Redmine server URL',
+        'REDMINE_API_KEY': 'Required - Redmine API key'
     }
     
     optional_vars = {
-        'REDMINE_MCP_LOG_LEVEL': '可選 - 日誌級別',
-        'REDMINE_MCP_TIMEOUT': '可選 - 請求超時時間',
-        'LOG_LEVEL': '備用 - 日誌級別（備用）',
-        'REDMINE_TIMEOUT': '備用 - 請求超時時間（備用）'
+        'REDMINE_MCP_LOG_LEVEL': 'Optional - Log level',
+        'REDMINE_MCP_TIMEOUT': 'Optional - Request timeout',
+        'LOG_LEVEL': 'Fallback - Log level (fallback)',
+        'REDMINE_TIMEOUT': 'Fallback - Request timeout (fallback)'
     }
     
     missing_required = []
     
-    print("\n必要環境變數:")
+    print("\nRequired environment variables:")
     for var, desc in required_vars.items():
         value = os.getenv(var)
         if value:
-            # 隱藏 API 金鑰
+            # Hide API key
             display_value = value if var != 'REDMINE_API_KEY' else f"{value[:8]}...{value[-4:]}"
             print(f"  ✅ {var}: {display_value}")
         else:
-            print(f"  ❌ {var}: 未設定 ({desc})")
+            print(f"  ❌ {var}: Not set ({desc})")
             missing_required.append(var)
     
-    print("\n可選環境變數:")
+    print("\nOptional environment variables:")
     for var, desc in optional_vars.items():
         value = os.getenv(var)
         if value:
             print(f"  ✅ {var}: {value}")
         else:
-            print(f"  ⚪ {var}: 未設定 ({desc})")
+            print(f"  ⚪ {var}: Not set ({desc})")
     
     if missing_required:
-        print(f"\n❌ 缺少必要環境變數: {', '.join(missing_required)}")
-        print("\n設定方式:")
+        print(f"\n❌ Missing required environment variables: {', '.join(missing_required)}")
+        print("\nSetup method:")
         print("export REDMINE_DOMAIN='https://your-redmine-domain.com'")
         print("export REDMINE_API_KEY='your_api_key_here'")
         return False
     
-    # 嘗試載入配置
-    print("\n2️⃣ 測試配置載入...")
+    # Try loading configuration
+    print("\n2️⃣ Testing configuration loading...")
     try:
         from redmine_mcp.config import get_config
         config = get_config()
         
-        print(f"✅ 配置載入成功")
+        print(f"✅ Configuration loaded successfully")
         print(f"  - Domain: {config.redmine_domain}")
         print(f"  - API Key: {config.redmine_api_key[:8]}...{config.redmine_api_key[-4:]}")
         print(f"  - Timeout: {config.redmine_timeout}s")
         print(f"  - Log Level: {config.log_level}")
         
     except Exception as e:
-        print(f"❌ 配置載入失敗: {e}")
+        print(f"❌ Configuration loading failed: {e}")
         return False
     
-    # 測試客戶端初始化
-    print("\n3️⃣ 測試客戶端初始化...")
+    # Test client initialization
+    print("\n3️⃣ Testing client initialization...")
     try:
         from redmine_mcp.redmine_client import get_client
         client = get_client()
         
-        print(f"✅ 客戶端初始化成功")
-        print(f"  - 快取目錄: {client.cache_dir}")
-        print(f"  - 快取檔案: {client._cache_file.name}")
+        print(f"✅ Client initialization successful")
+        print(f"  - Cache directory: {client.cache_dir}")
+        print(f"  - Cache file: {client._cache_file.name}")
         
     except Exception as e:
-        print(f"❌ 客戶端初始化失敗: {e}")
+        print(f"❌ Client initialization failed: {e}")
         return False
     
-    # 測試網路連接（不需要有效 API）
-    print("\n4️⃣ 測試網路連接...")
+    # Test network connection (does not require valid API)
+    print("\n4️⃣ Testing network connection...")
     try:
         import requests
         from urllib.parse import urlparse
@@ -100,19 +100,19 @@ def check_configuration():
         base_url = f"{parsed.scheme}://{parsed.netloc}"
         
         response = requests.get(base_url, timeout=10)
-        print(f"✅ 網路連接正常 (HTTP {response.status_code})")
+        print(f"✅ Network connection normal (HTTP {response.status_code})")
         
     except Exception as e:
-        print(f"⚠️ 網路連接測試失敗: {e}")
-        print("    這可能是正常的，如果 Redmine 需要特殊認證")
+        print(f"⚠️ Network connection test failed: {e}")
+        print("    This may be normal if Redmine requires special authentication")
     
-    print("\n✅ 基本配置檢查完成")
+    print("\n✅ Basic configuration check completed")
     return True
 
 
 def test_offline_features():
-    """測試不需要網路連接的功能"""
-    print("\n🔧 測試離線功能")
+    """Test features that do not require network connection"""
+    print("\n🔧 Testing offline features")
     print("=" * 50)
     
     try:
@@ -120,38 +120,38 @@ def test_offline_features():
         
         client = get_client()
         
-        # 測試快取目錄建立
-        print("1️⃣ 測試快取目錄...")
+        # Test cache directory creation
+        print("1️⃣ Testing cache directory...")
         cache_dir = client.cache_dir
         
         if cache_dir.exists():
-            print(f"✅ 快取目錄存在: {cache_dir}")
+            print(f"✅ Cache directory exists: {cache_dir}")
         else:
-            print(f"⚠️ 快取目錄不存在，嘗試建立...")
+            print(f"⚠️ Cache directory does not exist, trying to create...")
             cache_dir.mkdir(parents=True, exist_ok=True)
             if cache_dir.exists():
-                print(f"✅ 快取目錄建立成功: {cache_dir}")
+                print(f"✅ Cache directory created successfully: {cache_dir}")
             else:
-                print(f"❌ 快取目錄建立失敗")
+                print(f"❌ Cache directory creation failed")
                 return False
         
-        # 測試快取檔案命名
-        print("\n2️⃣ 測試快取檔案命名...")
+        # Test cache file naming
+        print("\n2️⃣ Testing cache file naming...")
         cache_file = client._cache_file
-        print(f"✅ 快取檔案名稱: {cache_file.name}")
+        print(f"✅ Cache file name: {cache_file.name}")
         
-        # 檢查檔案名稱是否包含 domain 資訊
+        # Check if file name contains domain information
         from redmine_mcp.config import get_config
         config = get_config()
         domain_part = config.redmine_domain.replace('://', '_').replace('/', '_').replace(':', '_')
         
         if domain_part in cache_file.name:
-            print(f"✅ 檔案名稱包含 domain 資訊")
+            print(f"✅ File name contains domain information")
         else:
-            print(f"⚠️ 檔案名稱可能有問題")
+            print(f"⚠️ File name may have issues")
         
-        # 測試空快取結構
-        print("\n3️⃣ 測試空快取結構...")
+        # Test empty cache structure
+        print("\n3️⃣ Testing empty cache structure...")
         empty_cache = {
             'cache_time': 0,
             'domain': config.redmine_domain,
@@ -164,67 +164,67 @@ def test_offline_features():
         
         import json
         test_content = json.dumps(empty_cache, ensure_ascii=False, indent=2)
-        print(f"✅ 快取結構測試通過")
+        print(f"✅ Cache structure test passed")
         
-        # 測試輔助函數（使用空資料）
-        print("\n4️⃣ 測試輔助函數（空資料）...")
+        # Test helper functions (with empty data)
+        print("\n4️⃣ Testing helper functions (empty data)...")
         
-        # 設定空快取
+        # Set empty cache
         client._enum_cache = empty_cache
         
-        result = client.find_priority_id_by_name("不存在的優先權")
+        result = client.find_priority_id_by_name("NonExistentPriority")
         if result is None:
-            print("✅ find_priority_id_by_name 正確回傳 None")
+            print("✅ find_priority_id_by_name correctly returns None")
         else:
-            print("❌ find_priority_id_by_name 應該回傳 None")
+            print("❌ find_priority_id_by_name should return None")
             return False
         
-        result = client.find_user_id("不存在的用戶")
+        result = client.find_user_id("Non-existent user")
         if result is None:
-            print("✅ find_user_id 正確回傳 None")
+            print("✅ find_user_id correctly returns None")
         else:
-            print("❌ find_user_id 應該回傳 None")
+            print("❌ find_user_id should return None")
             return False
         
-        print("\n✅ 離線功能測試完成")
+        print("\n✅ Offline feature test completed")
         return True
         
     except Exception as e:
-        print(f"❌ 離線功能測試失敗: {e}")
+        print(f"❌ Offline feature test failed: {e}")
         import traceback
         traceback.print_exc()
         return False
 
 
 def main():
-    """主要測試流程"""
-    print("🧪 redmine-mcp 配置和離線功能測試")
+    """Main test flow"""
+    print("🧪 redmine-mcp configuration and offline feature test")
     print("=" * 60)
     
-    # 配置檢查
+    # Configuration check
     config_ok = check_configuration()
     
-    # 離線功能測試
+    # Offline feature test
     offline_ok = test_offline_features()
     
-    # 總結
+    # Summary
     print("\n" + "=" * 60)
-    print("📊 測試總結")
+    print("📊 Test Summary")
     print("=" * 60)
     
-    print(f"配置檢查: {'✅ 通過' if config_ok else '❌ 失敗'}")
-    print(f"離線功能: {'✅ 通過' if offline_ok else '❌ 失敗'}")
+    print(f"Configuration check: {'✅ Passed' if config_ok else '❌ Failed'}")
+    print(f"Offline features: {'✅ Passed' if offline_ok else '❌ Failed'}")
     
     if config_ok and offline_ok:
-        print("\n🎉 基本功能正常！可以進行進一步測試")
-        print("\n💡 如果要測試完整功能，請確保:")
-        print("1. REDMINE_DOMAIN 指向可存取的 Redmine 伺服器")
-        print("2. REDMINE_API_KEY 是有效的 API 金鑰")
-        print("3. 網路連接正常")
-        print("\n然後執行: uv run python tests/scripts/quick_validation.py")
+        print("\n🎉 Basic functions normal! Can proceed with further testing")
+        print("\n💡 To test full functionality, please ensure:")
+        print("1. REDMINE_DOMAIN points to an accessible Redmine server")
+        print("2. REDMINE_API_KEY is a valid API key")
+        print("3. Network connection is normal")
+        print("\nThen run: uv run python tests/scripts/quick_validation.py")
         return True
     else:
-        print("\n❌ 基本功能有問題，請檢查配置")
+        print("\n❌ Basic functions have issues, please check configuration")
         return False
 
 

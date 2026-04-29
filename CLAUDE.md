@@ -2,67 +2,67 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## 專案概述
+## Project Overview
 
-這是一個 MCP (Model Context Protocol) 伺服器專案，用於與 Redmine 系統整合。使用 Python 3.12+ 和 uv 包管理器。
+This is an MCP (Model Context Protocol) server project for integrating with Redmine systems. Uses Python 3.12+ and the uv package manager.
 
-## 開發環境設置
+## Development Environment Setup
 
-### 依賴管理
-- 使用 `uv` 作為包管理器
-- 安裝依賴：`uv sync`
-- 執行測試：`uv run python -m pytest`
+### Dependency Management
+- Use `uv` as the package manager
+- Install dependencies: `uv sync`
+- Run tests: `uv run python -m pytest`
 
-### 專案結構  
+### Project Structure
 ```
 redmine-mcp/
-├── src/redmine_mcp/          # 主要原始碼
-│   ├── __init__.py           # 套件初始化
-│   ├── server.py             # MCP 服務器主程式 ✓ 已完成
-│   ├── redmine_client.py     # Redmine API 客戶端 ✓ 已完成
-│   ├── config.py             # 配置管理 ✓ 已完成
-├── tests/                    # 測試檔案
-├── docs/                     # 文件目錄
-│   ├── issues/               # 開發問題記錄
-│   └── manuals/              # 技術手冊
-├── pyproject.toml            # 專案配置和依賴
-├── uv.lock                   # 鎖定的依賴版本
-└── .env                      # 環境變數 (待建立)
+├── src/redmine_mcp/          # Main source code
+│   ├── __init__.py           # Package initialization
+│   ├── server.py             # MCP server main program ✓ Completed
+│   ├── redmine_client.py     # Redmine API client ✓ Completed
+│   ├── config.py             # Configuration management ✓ Completed
+├── tests/                    # Test files
+├── docs/                     # Documentation directory
+│   ├── issues/               # Development issue records
+│   └── manuals/              # Technical manuals
+├── pyproject.toml            # Project configuration and dependencies
+├── uv.lock                   # Locked dependency versions
+└── .env                      # Environment variables (to be created)
 ```
 
-## MCP 開發說明
+## MCP Development Notes
 
-### 技術棧
-- **MCP SDK**: mcp[cli] >= 1.9.4 (使用 FastMCP)
-- **HTTP 客戶端**: requests >= 2.31.0
-- **配置管理**: python-dotenv >= 1.0.0
-- **圖片處理**: Pillow >= 10.0.0
-- **Python 版本**: >= 3.12
+### Technology Stack
+- **MCP SDK**: mcp[cli] >= 1.9.4 (uses FastMCP)
+- **HTTP Client**: requests >= 2.31.0
+- **Configuration Management**: python-dotenv >= 1.0.0
+- **Image Processing**: Pillow >= 10.0.0
+- **Python Version**: >= 3.12
 
-### MCP 服務器架構
-- 使用 FastMCP 建立服務器
-- 工具註冊使用 `@mcp.tool()` 裝飾器
-- 支援非同步操作和類型安全
+### MCP Server Architecture
+- Uses FastMCP to build the server
+- Tool registration uses the `@mcp.tool()` decorator
+- Supports asynchronous operations and type safety
 
-### Redmine API 整合
-- **議題管理**: 查詢、建立、更新、刪除議題
-- **專案管理**: 查詢、建立、更新、刪除、封存專案
-- **用戶管理**: 查詢用戶、取得當前用戶資訊
-- **元數據查詢**: 狀態、優先級、追蹤器列表
-- **觀察者管理**: 新增/移除議題觀察者
-- **完整篩選支援**: 多條件篩選和排序
+### Redmine API Integration
+- **Issue Management**: Query, create, update, delete issues
+- **Project Management**: Query, create, update, delete, archive projects
+- **User Management**: Query users, get current user information
+- **Metadata Queries**: Status, priority, tracker lists
+- **Watcher Management**: Add/remove issue watchers
+- **Full Filter Support**: Multi-condition filtering and sorting
 
-## Claude Code 整合
+## Claude Code Integration
 
-### 安裝到 Claude Code
+### Install to Claude Code
 ```bash
-# 安裝 MCP 服務器
+# Install MCP server
 uv tool install .
 
-# 或使用 pip
+# Or using pip
 pip install .
 
-# 添加到 Claude Code
+# Add to Claude Code
 claude mcp add redmine "redmine-mcp" \
   -e REDMINE_DOMAIN="https://your-redmine-domain.com" \
   -e REDMINE_API_KEY="your_api_key_here" \
@@ -70,288 +70,288 @@ claude mcp add redmine "redmine-mcp" \
   -e REDMINE_MCP_TIMEOUT="30"
 ```
 
-### 環境變數說明
+### Environment Variable Reference
 
-為避免與其他專案的環境變數衝突，redmine-mcp 使用專屬前綴：
+To avoid conflicts with other projects' environment variables, redmine-mcp uses a dedicated prefix:
 
-- **必要變數**：
-  - `REDMINE_DOMAIN`: Redmine 伺服器網址
-  - `REDMINE_API_KEY`: Redmine API 金鑰
+- **Required Variables**:
+  - `REDMINE_DOMAIN`: Redmine server URL
+  - `REDMINE_API_KEY`: Redmine API key
 
-- **日誌級別控制**：
-  - `REDMINE_MCP_LOG_LEVEL`: 本專案專屬日誌級別（預設：INFO）
-  - `FASTMCP_LOG_LEVEL`: FastMCP 內建變數（可選）
-    - 如果不設定，系統會自動使用 `REDMINE_MCP_LOG_LEVEL` 的值
-    - 設定此變數可單獨控制 FastMCP 的日誌輸出
+- **Log Level Control**:
+  - `REDMINE_MCP_LOG_LEVEL`: Project-specific log level (default: INFO)
+  - `FASTMCP_LOG_LEVEL`: Built-in FastMCP variable (optional)
+    - If not set, the system will automatically use the value of `REDMINE_MCP_LOG_LEVEL`
+    - Setting this variable allows separate control of FastMCP log output
 
-- **其他配置**：
-  - `REDMINE_MCP_TIMEOUT`: 請求超時時間（秒）
-  - `REDMINE_TIMEOUT`: 向後相容的超時設定
+- **Other Configuration**:
+  - `REDMINE_MCP_TIMEOUT`: Request timeout (seconds)
+  - `REDMINE_TIMEOUT`: Backward-compatible timeout setting
 
-### 可用的 MCP 工具（26 個）
-- **管理工具**: server_info, health_check, refresh_cache
-- **查詢工具**: get_issue, list_project_issues, get_projects, get_issue_statuses, get_trackers, get_priorities, get_time_entry_activities, get_document_categories, search_issues, get_my_issues
-- **備註工具**: list_issue_journals, get_journal
-- **附件工具**: get_attachment_info, get_attachment_image ✨ 新增（支援縮圖與視覺分析）
-- **用戶工具**: search_users, list_users, get_user
-- **編輯工具**: update_issue_status, update_issue_content, add_issue_note（支援時間記錄）, assign_issue, close_issue
-- **建立工具**: create_new_issue（支援名稱參數）
+### Available MCP Tools (26)
+- **Management Tools**: server_info, health_check, refresh_cache
+- **Query Tools**: get_issue, list_project_issues, get_projects, get_issue_statuses, get_trackers, get_priorities, get_time_entry_activities, get_document_categories, search_issues, get_my_issues
+- **Journal Tools**: list_issue_journals, get_journal
+- **Attachment Tools**: get_attachment_info, get_attachment_image ✨ New (supports thumbnail and visual analysis)
+- **User Tools**: search_users, list_users, get_user
+- **Editing Tools**: update_issue_status, update_issue_content, add_issue_note (supports time entry recording), assign_issue, close_issue
+- **Creation Tools**: create_new_issue (supports name parameters)
 
-## 常用指令
+## Common Commands
 
 ```bash
-# 安裝依賴
+# Install dependencies
 uv sync
 
-# 執行 MCP 服務器
+# Run MCP server
 uv run python -m redmine_mcp.server
 
-# 測試 Claude Code 整合
+# Test Claude Code integration
 uv run python tests/scripts/claude_integration.py
 
-# 執行單元測試
+# Run unit tests
 uv run python -m pytest tests/unit/
 
-# 執行所有測試
+# Run all tests
 uv run python -m pytest tests/
 
-# 添加新依賴
+# Add new dependencies
 uv add <package-name>
 ```
 
-## 智慧快取系統 ✨
+## Smart Cache System ✨
 
-### 快取機制特色
-- **Multi-Domain 支援**: 根據 Redmine domain 自動建立獨立快取檔案
-- **自動更新**: 24小時自動刷新快取資料
-- **完整覆蓋**: 快取列舉值（優先權、狀態、追蹤器）和用戶資料
-- **檔案位置**: `~/.redmine_mcp/cache_{domain}_{hash}.json`
+### Cache Mechanism Features
+- **Multi-Domain Support**: Automatically creates independent cache files based on Redmine domain
+- **Auto-Update**: Cache data automatically refreshes every 24 hours
+- **Full Coverage**: Caches enum values (priority, status, tracker) and user data
+- **File Location**: `~/.redmine_mcp/cache_{domain}_{hash}.json`
 
-### 可用的輔助函數
+### Available Helper Functions
 ```python
 client = get_client()
 
-# 列舉值查詢
-priority_id = client.find_priority_id_by_name("低")           # → 5
-status_id = client.find_status_id_by_name("實作中")          # → 2  
-tracker_id = client.find_tracker_id_by_name("臭蟲")         # → 1
+# Enum value queries
+priority_id = client.find_priority_id_by_name("Low")           # → 5
+status_id = client.find_status_id_by_name("In Progress")       # → 2
+tracker_id = client.find_tracker_id_by_name("Bug")            # → 1
 
-# 用戶查詢
-user_id = client.find_user_id("Redmine Admin")              # 智慧查詢（姓名或登入名）
-user_id = client.find_user_id_by_name("Redmine Admin")      # 僅姓名查詢
-user_id = client.find_user_id_by_login("admin")             # 僅登入名查詢
+# User queries
+user_id = client.find_user_id("Redmine Admin")              # Smart query (name or login)
+user_id = client.find_user_id_by_name("Redmine Admin")      # Name-only query
+user_id = client.find_user_id_by_login("admin")             # Login-only query
 
-# 時間追蹤活動查詢
-activity_id = client.find_time_entry_activity_id_by_name("開發")  # → 11
+# Time entry activity queries
+activity_id = client.find_time_entry_activity_id_by_name("Development")  # → 11
 
-# 取得所有選項
-priorities = client.get_available_priorities()              # {"低": 5, "正常": 6, ...}
+# Get all options
+priorities = client.get_available_priorities()              # {"Low": 5, "Normal": 6, ...}
 users = client.get_available_users()                        # {"by_name": {...}, "by_login": {...}}
-activities = client.get_available_time_entry_activities()   # {"設計": 10, "開發": 11, ...}
+activities = client.get_available_time_entry_activities()   # {"Design": 10, "Development": 11, ...}
 
-# 手動刷新
+# Manual refresh
 client.refresh_cache()
 ```
 
-### MCP 工具
-- `refresh_cache()`: 手動刷新快取並顯示統計資訊
+### MCP Tools
+- `refresh_cache()`: Manually refresh cache and display statistics
 
-## 名稱參數支援 ✨
+## Name Parameter Support ✨
 
-### 支援名稱參數的 MCP 工具
-以下工具現在支援使用名稱而不僅僅是 ID：
+### MCP Tools Supporting Name Parameters
+The following tools now support using names instead of just IDs:
 
 ```python
-# 更新議題狀態（使用名稱）
-update_issue_status(issue_id=1, status_name="實作中")
+# Update issue status (using name)
+update_issue_status(issue_id=1, status_name="In Progress")
 
-# 更新議題內容（使用名稱）
+# Update issue content (using name)
 update_issue_content(
-    issue_id=1, 
-    priority_name="高", 
-    tracker_name="臭蟲"
+    issue_id=1,
+    priority_name="High",
+    tracker_name="Bug"
 )
 
-# 指派議題（使用名稱）
+# Assign issue (using name)
 assign_issue(issue_id=1, user_name="Redmine Admin")
 assign_issue(issue_id=1, user_login="admin")
 
-# 建立新議題（使用名稱）
+# Create new issue (using name)
 create_new_issue(
     project_id=1,
-    subject="新功能開發",
-    priority_name="正常",
-    tracker_name="功能",
+    subject="New Feature Development",
+    priority_name="Normal",
+    tracker_name="Feature",
     assigned_to_name="Redmine Admin"
 )
 ```
 
-### 錯誤處理
-如果提供的名稱不存在，工具會自動顯示可用選項：
+### Error Handling
+If the provided name does not exist, the tool will automatically display available options:
 ```
-找不到優先級名稱：「超高」
+Priority name not found: "Ultra High"
 
-可用優先級：
-- 低
-- 正常  
-- 高
-- 緊急
+Available priorities:
+- Low
+- Normal
+- High
+- Urgent
 ```
 
-## 備註查詢功能 ✨
+## Journal Query Feature ✨
 
-### 列出議題備註
-使用 `list_issue_journals` 列出議題的所有備註記錄：
+### List Issue Journals
+Use `list_issue_journals` to list all journal/note records for an issue:
 
 ```python
-# 列出有備註內容的記錄
+# List records with journal content
 list_issue_journals(issue_id=123)
 
-# 包含屬性變更記錄（狀態、優先權等變更）
+# Include property change records (status, priority, etc. changes)
 list_issue_journals(issue_id=123, include_property_changes=True)
 ```
 
-輸出範例：
+Output example:
 ```
-議題 #123 的備註記錄（共 3 筆）:
+Journal records for issue #123 (3 total):
 ==================================================
 
 📝 Journal #456
-   作者: 張三
-   時間: 2025-01-15T10:30:00Z
-   備註內容:
-      已完成初步測試
+   Author: Zhang San
+   Time: 2025-01-15T10:30:00Z
+   Note content:
+      Preliminary testing completed
 
 📝 Journal #457
-   作者: 李四
-   時間: 2025-01-16T14:20:00Z
-   🔒 私有備註
-   備註內容:
-      內部討論記錄
+   Author: Li Si
+   Time: 2025-01-16T14:20:00Z
+   🔒 Private note
+   Note content:
+      Internal discussion record
 ```
 
-### 取得單一備註詳情
-使用 `get_journal` 取得特定備註的完整資訊：
+### Get Single Journal Details
+Use `get_journal` to get complete information for a specific journal:
 
 ```python
-# 取得議題 #123 中的 Journal #456
+# Get Journal #456 from issue #123
 get_journal(issue_id=123, journal_id=456)
 ```
 
-輸出包含：
-- Journal ID 和所屬議題
-- 作者資訊（姓名和 ID）
-- 建立時間
-- 備註內容
-- 屬性變更詳情（舊值 → 新值）
+Output includes:
+- Journal ID and associated issue
+- Author information (name and ID)
+- Creation time
+- Note content
+- Property change details (old value → new value)
 
-## 附件圖片視覺分析功能 ✨
+## Attachment Image Visual Analysis Feature ✨
 
-### 取得附件資訊
-使用 `get_attachment_info` 取得附件的詳細資訊（不下載檔案）：
+### Get Attachment Information
+Use `get_attachment_info` to get detailed attachment information (without downloading the file):
 
 ```python
-# 取得附件資訊
+# Get attachment information
 get_attachment_info(attachment_id=123)
 ```
 
-輸出包含：檔案名稱、大小、類型、上傳者、上傳時間、下載連結
+Output includes: file name, size, type, uploader, upload time, download link
 
-### 視覺分析圖片附件
-使用 `get_attachment_image` 下載圖片並供 AI 進行視覺分析：
+### Visual Analysis of Image Attachments
+Use `get_attachment_image` to download images for AI visual analysis:
 
 ```python
-# 使用縮圖模式（預設，減少 token 消耗）
+# Use thumbnail mode (default, reduces token consumption)
 get_attachment_image(attachment_id=123)
 
-# 指定縮圖最大尺寸
+# Specify thumbnail maximum size
 get_attachment_image(attachment_id=123, max_size=600)
 
-# 取得原始大小圖片（不縮圖）
+# Get original size image (no thumbnail)
 get_attachment_image(attachment_id=123, thumbnail=False)
 ```
 
-### 使用流程範例
+### Usage Flow Example
 ```
-1. get_issue(123) → 取得議題，查看附件列表
-2. get_attachment_info(456) → 確認附件資訊
-3. get_attachment_image(456) → AI 視覺分析圖片內容
+1. get_issue(123) → Get issue, view attachment list
+2. get_attachment_info(456) → Confirm attachment information
+3. get_attachment_image(456) → AI visual analysis of image content
 ```
 
-### 功能特色
-- **縮圖模式**: 預設啟用，將大圖縮小至 800px，大幅減少 token 消耗
-- **格式轉換**: 自動轉換為 JPEG 格式，優化檔案大小
-- **透明度處理**: PNG 透明背景自動轉為白色
-- **錯誤處理**: 非圖片類型、檔案過大等情況會返回友好訊息
+### Feature Highlights
+- **Thumbnail Mode**: Enabled by default, scales large images down to 800px, significantly reducing token consumption
+- **Format Conversion**: Automatically converts to JPEG format, optimizing file size
+- **Transparency Handling**: PNG transparent backgrounds are automatically converted to white
+- **Error Handling**: Non-image types, oversized files, etc. return friendly messages
 
-### 支援的圖片格式
+### Supported Image Formats
 - PNG (`image/png`)
 - JPEG (`image/jpeg`)
 - GIF (`image/gif`)
 - WebP (`image/webp`)
 
-### 限制
-- 檔案大小上限：10 MB
-- 預設縮圖尺寸：800 px（最大邊長）
+### Limitations
+- File size limit: 10 MB
+- Default thumbnail size: 800 px (max edge length)
 
-## 時間記錄功能 ✨
+## Time Entry Feature ✨
 
-### add_issue_note 時間記錄支援
-現在可以在新增議題備註時同時記錄工作時間：
+### add_issue_note Time Entry Support
+Now you can record work time while adding issue notes:
 
 ```python
-# 新增備註並記錄時間（使用活動名稱）
+# Add note and record time (using activity name)
 add_issue_note(
     issue_id=1,
-    notes="完成功能開發",
+    notes="Feature development completed",
     spent_hours=2.5,
-    activity_name="開發"
+    activity_name="Development"
 )
 
-# 新增備註並記錄時間（使用活動 ID）
+# Add note and record time (using activity ID)
 add_issue_note(
     issue_id=1,
-    notes="修復 bug",
+    notes="Bug fix",
     spent_hours=1.0,
     activity_id=12,
-    spent_on="2025-06-25"  # 指定記錄日期
+    spent_on="2025-06-25"  # Specify record date
 )
 
-# 私有備註 + 時間記錄
+# Private note + time entry
 add_issue_note(
     issue_id=1,
-    notes="內部討論記錄",
+    notes="Internal discussion record",
     private=True,
     spent_hours=0.5,
-    activity_name="討論"
+    activity_name="Discussion"
 )
 
-# 僅新增備註（向後相容）
-add_issue_note(issue_id=1, notes="一般備註")
+# Add note only (backward compatible)
+add_issue_note(issue_id=1, notes="General note")
 ```
 
-### 時間追蹤活動支援
-系統支援以下預設活動：
-- 設計 (ID: 10)
-- 開發 (ID: 11)
-- 除錯 (ID: 12)
-- 調查 (ID: 13)
-- 討論 (ID: 14)
-- 測試 (ID: 15)
-- 維護 (ID: 16)
-- 文件 (ID: 17)
-- 教學 (ID: 18)
-- 翻譯 (ID: 19)
-- 其他 (ID: 20)
+### Time Tracking Activity Support
+The system supports the following default activities:
+- Design (ID: 10)
+- Development (ID: 11)
+- Debug (ID: 12)
+- Investigation (ID: 13)
+- Discussion (ID: 14)
+- Testing (ID: 15)
+- Maintenance (ID: 16)
+- Documentation (ID: 17)
+- Teaching (ID: 18)
+- Translation (ID: 19)
+- Other (ID: 20)
 
-### 特色功能
-- **智慧快取**: 時間追蹤活動資訊自動快取，提升查詢效率
-- **名稱參數**: 支援使用活動名稱而非 ID，使用更直觀
-- **向後相容**: 保持原有 `add_issue_note` 功能完全相容
-- **錯誤提示**: 無效活動名稱時自動顯示可用選項
-- **彈性日期**: 可指定記錄日期，預設為今日
+### Feature Highlights
+- **Smart Cache**: Time tracking activity information is automatically cached to improve query efficiency
+- **Name Parameters**: Supports using activity names instead of IDs for more intuitive usage
+- **Backward Compatible**: Maintains full backward compatibility with the original `add_issue_note` function
+- **Error Prompts**: Automatically displays available options when an invalid activity name is provided
+- **Flexible Dates**: Can specify record date, defaults to today
 
-## 注意事項
+## Notes
 
-- 專案正在開發初期階段
-- 後續會根據開發進度更新此檔案內容
+- The project is in the early development stage
+- This file will be updated as development progresses

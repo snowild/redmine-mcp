@@ -1,6 +1,6 @@
 """
-測試新實作功能的整合測試
-包含用戶查詢、快取機制、輔助函數等
+Integration tests for newly implemented features
+Includes user queries, cache mechanism, helper functions, etc.
 """
 
 import pytest
@@ -8,23 +8,23 @@ import os
 import json
 from pathlib import Path
 from datetime import datetime
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 from src.redmine_mcp.redmine_client import get_client, RedmineClient, RedmineAPIError
 from src.redmine_mcp.config import get_config
 
 
 class TestUserFunctionality:
-    """測試用戶查詢功能"""
+    """Test user query functionality"""
     
     def test_search_users_by_name(self):
-        """測試根據姓名搜尋用戶"""
+        """Test searching users by name"""
         try:
             client = get_client()
             users = client.search_users("admin", limit=5)
             
             assert isinstance(users, list)
-            print(f"✅ 搜尋用戶功能正常，找到 {len(users)} 個用戶")
+            print(f"✅ User search function works, found {len(users)} users")
             
             if users:
                 user = users[0]
@@ -32,167 +32,227 @@ class TestUserFunctionality:
                 assert hasattr(user, 'login')
                 assert hasattr(user, 'firstname')
                 assert hasattr(user, 'lastname')
-                print(f"✅ 用戶數據結構正確：{user.login}")
+                print(f"✅ User data structure correct: {user.login}")
             
         except RedmineAPIError as e:
-            pytest.skip(f"Redmine API 錯誤（可能是權限問題）: {e}")
+            pytest.skip(f"Redmine API error (may be permission issue): {e}")
         except Exception as e:
-            pytest.fail(f"用戶搜尋測試失敗: {e}")
+            pytest.fail(f"User search test failed: {e}")
     
     def test_list_users(self):
-        """測試列出所有用戶"""
+        """Test listing all users"""
         try:
             client = get_client()
             users = client.list_users(limit=10)
             
             assert isinstance(users, list)
-            print(f"✅ 列出用戶功能正常，共 {len(users)} 個用戶")
+            print(f"✅ List users function works, total {len(users)} users")
             
             if users:
                 user = users[0]
                 assert user.id > 0
                 assert user.login
-                print(f"✅ 第一個用戶：ID={user.id}, Login={user.login}")
+                print(f"✅ First user: ID={user.id}, Login={user.login}")
             
         except RedmineAPIError as e:
-            pytest.skip(f"Redmine API 錯誤: {e}")
+            pytest.skip(f"Redmine API error: {e}")
         except Exception as e:
-            pytest.fail(f"列出用戶測試失敗: {e}")
+            pytest.fail(f"List users test failed: {e}")
     
     def test_get_user_details(self):
-        """測試取得特定用戶詳情"""
+        """Test getting specific user details"""
         try:
             client = get_client()
-            # 通常 ID 1 是管理員
+            # Usually ID 1 is admin
             user_data = client.get_user(1)
             
             assert isinstance(user_data, dict)
             assert 'id' in user_data
             assert 'login' in user_data
-            print(f"✅ 取得用戶詳情功能正常：{user_data.get('login', 'N/A')}")
+            print(f"✅ Get user details function works: {user_data.get('login', 'N/A')}")
             
         except RedmineAPIError as e:
-            pytest.skip(f"Redmine API 錯誤: {e}")
+            pytest.skip(f"Redmine API error: {e}")
         except Exception as e:
-            pytest.fail(f"取得用戶詳情測試失敗: {e}")
+            pytest.fail(f"Get user details test failed: {e}")
 
 
 class TestCacheSystem:
-    """測試快取系統功能"""
+    """Test cache system functionality"""
     
     def test_cache_file_creation(self):
-        """測試快取檔案是否正確建立"""
+        """Test if cache file is created correctly"""
         client = get_client()
         cache_dir = client.cache_dir
         cache_file = client._cache_file
         
-        # 檢查快取目錄
+        # Check cache directory
         assert cache_dir.exists()
         assert cache_dir.is_dir()
-        print(f"✅ 快取目錄存在：{cache_dir}")
+        print(f"✅ Cache directory exists: {cache_dir}")
         
-        # 檢查檔案名稱格式
+        # Check file name format
         assert "cache_" in cache_file.name
         config = get_config()
         domain_in_filename = config.redmine_domain.replace('://', '_').replace('/', '_').replace(':', '_')
         assert domain_in_filename in cache_file.name
-        print(f"✅ 快取檔案名稱正確：{cache_file.name}")
+        print(f"✅ Cache file name correct: {cache_file.name}")
     
-    def test_cache_content_structure(self):
-        """測試快取內容結構"""
+    @patch.object(RedmineClient, 'list_users')
+    @patch.object(RedmineClient, 'get_time_entry_activities')
+    @patch.object(RedmineClient, 'get_trackers')
+    @patch.object(RedmineClient, 'get_issue_statuses')
+    @patch.object(RedmineClient, 'get_priorities')
+    def test_cache_content_structure(self, mock_get_priorities, mock_get_issue_statuses,
+                                      mock_get_trackers, mock_get_time_entry_activities,
+                                      mock_list_users):
+        """Test cache content structure"""
+        # Setup mocks
+        mock_get_priorities.return_value = [{'id': 1, 'name': 'Normal'}]
+        mock_get_issue_statuses.return_value = [{'id': 1, 'name': 'New'}]
+        mock_get_trackers.return_value = [{'id': 1, 'name': 'Bug'}]
+        mock_get_time_entry_activities.return_value = [{'id': 1, 'name': 'Development'}]
+        mock_user = Mock()
+        mock_user.id = 1
+        mock_user.firstname = 'John'
+        mock_user.lastname = 'Doe'
+        mock_user.login = 'jdoe'
+        mock_list_users.return_value = [mock_user]
+
         try:
             client = get_client()
-            # 強制刷新快取
+            # Force refresh cache
             client.refresh_cache()
             
             cache = client._load_enum_cache()
             
-            # 檢查必要欄位
+            # Check required fields
             required_fields = ['cache_time', 'domain', 'priorities', 'statuses', 'trackers', 'users_by_name', 'users_by_login']
             for field in required_fields:
-                assert field in cache, f"快取缺少必要欄位：{field}"
+                assert field in cache, f"Cache missing required field: {field}"
             
-            # 檢查 domain 是否正確
+            # Check domain is correct
             config = get_config()
             assert cache['domain'] == config.redmine_domain
             
-            # 檢查時間戳
+            # Check timestamp
             assert isinstance(cache['cache_time'], (int, float))
             assert cache['cache_time'] > 0
             
-            print(f"✅ 快取結構正確")
+            print(f"✅ Cache structure correct")
             print(f"  - Domain: {cache['domain']}")
-            print(f"  - 優先權: {len(cache['priorities'])} 個")
-            print(f"  - 狀態: {len(cache['statuses'])} 個")
-            print(f"  - 追蹤器: {len(cache['trackers'])} 個")
-            print(f"  - 用戶（姓名）: {len(cache['users_by_name'])} 個")
-            print(f"  - 用戶（登入名）: {len(cache['users_by_login'])} 個")
+            print(f"  - Priorities: {len(cache['priorities'])} items")
+            print(f"  - Statuses: {len(cache['statuses'])} items")
+            print(f"  - Trackers: {len(cache['trackers'])} items")
+            print(f"  - Users (name): {len(cache['users_by_name'])} items")
+            print(f"  - Users (login): {len(cache['users_by_login'])} items")
             
         except Exception as e:
-            pytest.fail(f"快取內容測試失敗: {e}")
+            pytest.fail(f"Cache content test failed: {e}")
     
-    def test_cache_persistence(self):
-        """測試快取持久化"""
+    @patch.object(RedmineClient, 'list_users')
+    @patch.object(RedmineClient, 'get_time_entry_activities')
+    @patch.object(RedmineClient, 'get_trackers')
+    @patch.object(RedmineClient, 'get_issue_statuses')
+    @patch.object(RedmineClient, 'get_priorities')
+    def test_cache_persistence(self, mock_get_priorities, mock_get_issue_statuses,
+                                mock_get_trackers, mock_get_time_entry_activities,
+                                mock_list_users):
+        """Test cache persistence"""
+        # Setup mocks
+        mock_get_priorities.return_value = [{'id': 1, 'name': 'Normal'}]
+        mock_get_issue_statuses.return_value = [{'id': 1, 'name': 'New'}]
+        mock_get_trackers.return_value = [{'id': 1, 'name': 'Bug'}]
+        mock_get_time_entry_activities.return_value = [{'id': 1, 'name': 'Development'}]
+        mock_user = Mock()
+        mock_user.id = 1
+        mock_user.firstname = 'John'
+        mock_user.lastname = 'Doe'
+        mock_user.login = 'jdoe'
+        mock_list_users.return_value = [mock_user]
+
         try:
             client = get_client()
             cache_file = client._cache_file
             
-            # 確保有快取
+            # Ensure cache exists
             client.refresh_cache()
             
-            # 檢查檔案是否存在
+            # Check file exists
             assert cache_file.exists()
             
-            # 讀取並驗證 JSON 格式
+            # Read and validate JSON format
             with open(cache_file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             
             assert isinstance(data, dict)
             assert 'cache_time' in data
-            print(f"✅ 快取檔案持久化正常：{cache_file}")
+            print(f"✅ Cache file persistence normal: {cache_file}")
             
         except Exception as e:
-            pytest.fail(f"快取持久化測試失敗: {e}")
+            pytest.fail(f"Cache persistence test failed: {e}")
 
 
 class TestHelperFunctions:
-    """測試輔助函數功能"""
+    """Test helper function functionality"""
     
-    def test_priority_name_lookup(self):
-        """測試優先權名稱查詢"""
+    @patch.object(RedmineClient, '_load_enum_cache')
+    @patch.object(RedmineClient, 'get_priorities')
+    def test_priority_name_lookup(self, mock_get_priorities, mock_load_cache):
+        """Test priority name lookup"""
+        mock_get_priorities.return_value = [{'id': 1, 'name': 'Normal'}]
+        mock_load_cache.return_value = {
+            'priorities': {'Normal': 1},
+            'statuses': {},
+            'trackers': {},
+            'users_by_name': {},
+            'users_by_login': {}
+        }
+
         try:
             client = get_client()
             
-            # 先取得所有優先權來找一個有效的名稱
+            # First get all priorities to find a valid name
             priorities = client.get_priorities()
             if not priorities:
-                pytest.skip("沒有可用的優先權資料")
+                pytest.skip("No available priority data")
             
             priority_name = priorities[0]['name']
             expected_id = priorities[0]['id']
             
-            # 測試輔助函數
+            # Test helper function
             found_id = client.find_priority_id_by_name(priority_name)
             
             assert found_id == expected_id
-            print(f"✅ 優先權名稱查詢正常：'{priority_name}' → {found_id}")
+            print(f"✅ Priority name lookup normal: '{priority_name}' → {found_id}")
             
-            # 測試不存在的名稱
-            invalid_id = client.find_priority_id_by_name("不存在的優先權")
+            # Test non-existent name
+            invalid_id = client.find_priority_id_by_name("NonExistentPriority")
             assert invalid_id is None
-            print(f"✅ 無效優先權名稱正確回傳 None")
+            print(f"✅ Invalid priority name correctly returns None")
             
         except Exception as e:
-            pytest.fail(f"優先權名稱查詢測試失敗: {e}")
+            pytest.fail(f"Priority name lookup test failed: {e}")
     
-    def test_status_name_lookup(self):
-        """測試狀態名稱查詢"""
+    @patch.object(RedmineClient, '_load_enum_cache')
+    @patch.object(RedmineClient, 'get_issue_statuses')
+    def test_status_name_lookup(self, mock_get_issue_statuses, mock_load_cache):
+        """Test status name lookup"""
+        mock_get_issue_statuses.return_value = [{'id': 1, 'name': 'New'}]
+        mock_load_cache.return_value = {
+            'priorities': {},
+            'statuses': {'New': 1},
+            'trackers': {},
+            'users_by_name': {},
+            'users_by_login': {}
+        }
+
         try:
             client = get_client()
             
             statuses = client.get_issue_statuses()
             if not statuses:
-                pytest.skip("沒有可用的狀態資料")
+                pytest.skip("No available status data")
             
             status_name = statuses[0]['name']
             expected_id = statuses[0]['id']
@@ -200,19 +260,30 @@ class TestHelperFunctions:
             found_id = client.find_status_id_by_name(status_name)
             
             assert found_id == expected_id
-            print(f"✅ 狀態名稱查詢正常：'{status_name}' → {found_id}")
+            print(f"✅ Status name lookup normal: '{status_name}' → {found_id}")
             
         except Exception as e:
-            pytest.fail(f"狀態名稱查詢測試失敗: {e}")
+            pytest.fail(f"Status name lookup test failed: {e}")
     
-    def test_tracker_name_lookup(self):
-        """測試追蹤器名稱查詢"""
+    @patch.object(RedmineClient, '_load_enum_cache')
+    @patch.object(RedmineClient, 'get_trackers')
+    def test_tracker_name_lookup(self, mock_get_trackers, mock_load_cache):
+        """Test tracker name lookup"""
+        mock_get_trackers.return_value = [{'id': 1, 'name': 'Bug'}]
+        mock_load_cache.return_value = {
+            'priorities': {},
+            'statuses': {},
+            'trackers': {'Bug': 1},
+            'users_by_name': {},
+            'users_by_login': {}
+        }
+
         try:
             client = get_client()
             
             trackers = client.get_trackers()
             if not trackers:
-                pytest.skip("沒有可用的追蹤器資料")
+                pytest.skip("No available tracker data")
             
             tracker_name = trackers[0]['name']
             expected_id = trackers[0]['id']
@@ -220,17 +291,17 @@ class TestHelperFunctions:
             found_id = client.find_tracker_id_by_name(tracker_name)
             
             assert found_id == expected_id
-            print(f"✅ 追蹤器名稱查詢正常：'{tracker_name}' → {found_id}")
+            print(f"✅ Tracker name lookup normal: '{tracker_name}' → {found_id}")
             
         except Exception as e:
-            pytest.fail(f"追蹤器名稱查詢測試失敗: {e}")
+            pytest.fail(f"Tracker name lookup test failed: {e}")
     
     def test_user_name_lookup(self):
-        """測試用戶名稱查詢"""
+        """Test user name lookup"""
         try:
             client = get_client()
             
-            # 刷新快取確保有用戶資料
+            # Refresh cache to ensure user data exists
             client.refresh_cache()
             cache = client._load_enum_cache()
             
@@ -238,41 +309,41 @@ class TestHelperFunctions:
             users_by_login = cache.get('users_by_login', {})
             
             if users_by_name:
-                # 測試姓名查詢
+                # Test name lookup
                 user_name = list(users_by_name.keys())[0]
                 expected_id = users_by_name[user_name]
                 
                 found_id = client.find_user_id_by_name(user_name)
                 assert found_id == expected_id
-                print(f"✅ 用戶姓名查詢正常：'{user_name}' → {found_id}")
+                print(f"✅ User name lookup normal: '{user_name}' → {found_id}")
             
             if users_by_login:
-                # 測試登入名查詢
+                # Test login lookup
                 login_name = list(users_by_login.keys())[0]
                 expected_id = users_by_login[login_name]
                 
                 found_id = client.find_user_id_by_login(login_name)
                 assert found_id == expected_id
-                print(f"✅ 用戶登入名查詢正常：'{login_name}' → {found_id}")
+                print(f"✅ User login lookup normal: '{login_name}' → {found_id}")
                 
-                # 測試智慧查詢
+                # Test smart lookup
                 smart_id = client.find_user_id(login_name)
                 assert smart_id == expected_id
-                print(f"✅ 智慧用戶查詢正常：'{login_name}' → {smart_id}")
+                print(f"✅ Smart user lookup normal: '{login_name}' → {smart_id}")
             
             if not users_by_name and not users_by_login:
-                pytest.skip("沒有可用的用戶快取資料")
+                pytest.skip("No available user cache data")
                 
         except Exception as e:
-            pytest.fail(f"用戶名稱查詢測試失敗: {e}")
+            pytest.fail(f"User name lookup test failed: {e}")
 
 
 class TestDomainIsolation:
-    """測試 Multi-Domain 隔離功能"""
+    """Test Multi-Domain isolation functionality"""
     
     def test_cache_filename_uniqueness(self):
-        """測試不同 domain 的快取檔案名稱唯一性"""
-        # 模擬不同的 domain
+        """Test cache file name uniqueness for different domains"""
+        # Simulate different domains
         domains = [
             "https://demo.redmine.org",
             "https://test.redmine.com", 
@@ -281,7 +352,7 @@ class TestDomainIsolation:
         
         cache_files = []
         for domain in domains:
-            with patch('src.redmine_mcp.config.get_config') as mock_config:
+            with patch('src.redmine_mcp.redmine_client.get_config') as mock_config:
                 mock_config.return_value.redmine_domain = domain
                 mock_config.return_value.api_headers = {'X-Redmine-API-Key': 'test'}
                 mock_config.return_value.redmine_timeout = 30
@@ -289,17 +360,17 @@ class TestDomainIsolation:
                 client = RedmineClient()
                 cache_files.append(client._cache_file.name)
         
-        # 檢查所有快取檔案名稱都不同
+        # Check all cache file names are different
         assert len(set(cache_files)) == len(cache_files)
-        print(f"✅ Multi-Domain 快取檔案隔離正常")
+        print(f"✅ Multi-Domain cache file isolation normal")
         for i, filename in enumerate(cache_files):
             print(f"  {domains[i]} → {filename}")
 
 
 def run_comprehensive_test():
-    """執行完整的功能驗證測試"""
+    """Run comprehensive functionality validation test"""
     print("=" * 60)
-    print("🚀 開始執行 redmine-mcp 新功能驗證測試")
+    print("🚀 Starting redmine-mcp new feature validation test")
     print("=" * 60)
     
     test_classes = [
@@ -314,7 +385,7 @@ def run_comprehensive_test():
     failed_tests = []
     
     for test_class in test_classes:
-        print(f"\n📋 執行 {test_class.__name__} 測試...")
+        print(f"\n📋 Running {test_class.__name__} tests...")
         print("-" * 40)
         
         test_instance = test_class()
@@ -323,37 +394,37 @@ def run_comprehensive_test():
         for test_method in test_methods:
             total_tests += 1
             try:
-                print(f"\n🔍 執行 {test_method}...")
+                print(f"\n🔍 Running {test_method}...")
                 getattr(test_instance, test_method)()
                 passed_tests += 1
-                print(f"✅ {test_method} 通過")
+                print(f"✅ {test_method} passed")
             except pytest.skip.Exception as e:
-                print(f"⏭️  {test_method} 跳過: {e}")
-                passed_tests += 1  # 跳過的測試算作通過
+                print(f"⏭️  {test_method} skipped: {e}")
+                passed_tests += 1  # Skipped tests count as passed
             except Exception as e:
-                print(f"❌ {test_method} 失敗: {e}")
+                print(f"❌ {test_method} failed: {e}")
                 failed_tests.append((test_method, str(e)))
     
-    # 輸出測試總結
+    # Output test summary
     print("\n" + "=" * 60)
-    print("📊 測試結果總結")
+    print("📊 Test Result Summary")
     print("=" * 60)
-    print(f"總測試數: {total_tests}")
-    print(f"通過數: {passed_tests}")
-    print(f"失敗數: {len(failed_tests)}")
-    print(f"成功率: {(passed_tests/total_tests)*100:.1f}%")
+    print(f"Total tests: {total_tests}")
+    print(f"Passed: {passed_tests}")
+    print(f"Failed: {len(failed_tests)}")
+    print(f"Success rate: {(passed_tests/total_tests)*100:.1f}%")
     
     if failed_tests:
-        print("\n❌ 失敗的測試:")
+        print("\n❌ Failed tests:")
         for test_name, error in failed_tests:
             print(f"  - {test_name}: {error}")
     else:
-        print("\n🎉 所有測試都通過了！")
+        print("\n🎉 All tests passed!")
     
     return len(failed_tests) == 0
 
 
 if __name__ == "__main__":
-    # 直接執行測試
+    # Run tests directly
     success = run_comprehensive_test()
     exit(0 if success else 1)

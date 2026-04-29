@@ -1,54 +1,54 @@
-# Issue: Redmine REST API 設定步驟補充
+# Issue: Redmine REST API Setup Steps Supplement
 
-## 問題描述
+## Problem Description
 
-用戶在設定 Redmine MCP 時，無法在「我的帳號」中找到 API 金鑰選項，這是因為 Redmine 預設沒有啟用 REST API 功能。
+When setting up Redmine MCP, users could not find the API key option in "My Account". This is because Redmine does not enable the REST API functionality by default.
 
-## 發現經過
+## Discovery Process
 
-1. 使用 admin/admin 登入 http://127.0.0.1:3000/
-2. 在「我的帳號」頁面找不到 API 金鑰選項
-3. 前往 http://127.0.0.1:3000/settings?tab=api
-4. 勾選「啟用 REST 網路服務技術（Web Service）」
-5. 執行儲存後，才能在「我的帳號」中找到 API 金鑰選項
+1. Log in to http://127.0.0.1:3000/ using admin/admin
+2. Cannot find the API key option on the "My Account" page
+3. Go to http://127.0.0.1:3000/settings?tab=api
+4. Check "Enable REST web service (Web Service)"
+5. After saving, the API key option can be found in "My Account"
 
-## 解決方案
+## Solution
 
-### 1. 更新 README.md
-- 在第 4 節新增「4.1 啟用 REST API」步驟
-- 明確說明需要管理員權限來啟用此功能
-- 在故障排除區段加強相關說明
+### 1. Update README.md
+- Added "4.1 Enable REST API" step in Section 4
+- Clearly stated that administrator permissions are required to enable this feature
+- Strengthened relevant explanations in the troubleshooting section
 
-### 2. 設定步驟
+### 2. Setup Steps
 ```
-4.1 啟用 REST API（需要管理員權限）
-1. 以管理員身份登入 Redmine 系統
-2. 前往 管理 → 設定 → API
-3. 勾選「啟用 REST 網路服務技術（Web Service）」
-4. 點擊儲存按鈕
+4.1 Enable REST API (requires administrator permissions)
+1. Log in to the Redmine system as administrator
+2. Go to Administration → Settings → API
+3. Check "Enable REST web service (Web Service)"
+4. Click the Save button
 
-4.2 取得 API 金鑰
-1. 登入您的 Redmine 系統（可以是管理員或一般用戶）
-2. 前往 我的帳號 → API 存取金鑰
-3. 點擊 顯示 或 重設 來取得 API 金鑰
-4. 將金鑰複製到 .env 檔案中的 REDMINE_API_KEY
+4.2 Get API Key
+1. Log in to your Redmine system (can be administrator or regular user)
+2. Go to My Account → API Access Key
+3. Click Show or Reset to get the API key
+4. Copy the key to REDMINE_API_KEY in the .env file
 ```
 
-## 影響
+## Impact
 
-- 這是所有使用 Redmine MCP 的前置條件
-- 如果沒有啟用 REST API，所有 MCP 工具都會失敗
-- 需要管理員權限才能啟用此功能
+- This is a prerequisite for all Redmine MCP users
+- If REST API is not enabled, all MCP tools will fail
+- Administrator permissions are required to enable this feature
 
-## 狀態
+## Status
 
-✅ **已解決** - README.md 已更新，包含完整的設定步驟和故障排除指南
+✅ **Resolved** - README.md has been updated, includes complete setup steps and troubleshooting guide
 
-## 相關檔案
+## Related Files
 
-- `/README.md` - 主要文件，包含設定步驟
-- `/docs/issues/issue_rest_api_setup.md` - 此問題記錄
+- `/README.md` - Main documentation, includes setup steps
+- `/docs/issues/issue_rest_api_setup.md` - This issue record
 
-## 建議
+## Recommendations
 
-未來考慮在快速設定腳本 (`quick_start.sh`) 中加入檢查 REST API 是否啟用的功能，並提供相應的設定指導。
+Consider adding a check for whether REST API is enabled to the quick setup script (`quick_start.sh`) in the future, and provide corresponding setup guidance.
