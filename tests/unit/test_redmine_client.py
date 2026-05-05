@@ -6,6 +6,7 @@ import os
 import pytest
 from unittest.mock import patch, Mock
 import requests
+from redmine_mcp.config import reload_config
 from redmine_mcp.redmine_client import (
     RedmineClient, RedmineAPIError, RedmineIssue, RedmineProject,
     get_client, reload_client
@@ -242,3 +243,68 @@ class TestClientSingleton:
 
             assert client1 is not client2
             assert client1.config.redmine_domain == client2.config.redmine_domain
+
+
+class TestPerKeyClient:
+    """Test per-API-key client isolation"""
+
+    def test_get_client_with_api_key(self):
+        """Test get_client with custom API key creates separate instance"""
+        with patch.dict(os.environ, {
+            'REDMINE_DOMAIN': 'https://test.redmine.com',
+            'REDMINE_API_KEY': 'default_key'
+        }):
+            reload_config()
+            reload_client()
+            default_client = get_client()
+            custom_client = get_client(api_key='custom_key')
+            
+            assert default_client is not custom_client
+            assert default_client.session.headers['X-Redmine-API-Key'] == 'default_key'
+            assert custom_client.session.headers['X-Redmine-API-Key'] == 'custom_key'
+
+    def test_get_client_same_key_returns_same_instance(self):
+        """Test get_client with same API key returns cached instance"""
+        with patch.dict(os.environ, {
+            'REDMINE_DOMAIN': 'https://test.redmine.com',
+            'REDMINE_API_KEY': 'default_key'
+        }):
+            reload_config()
+            reload_client()
+            client1 = get_client(api_key='same_key')
+            client2 = get_client(api_key='same_key')
+            
+            assert client1 is client2
+
+    def test_per_key_cache_isolation(self):
+        """Test that cache files are isolated per API key"""
+        with patch.dict(os.environ, {
+            'REDMINE_DOMAIN': 'https://test.redmine.com',
+            'REDMINE_API_KEY': 'default_key'
+        }):
+            reload_config()
+            reload_client()
+            client1 = get_client(api_key='key_a')
+            client2 = get_client(api_key='key_b')
+            
+            assert client1._cache_file != client2._cache_file
+
+    def test_client_init_with_api_key_override(self):
+        """Test RedmineClient accepts api_key parameter"""
+        with patch.dict(os.environ, {
+            'REDMINE_DOMAIN': 'https://test.redmine.com',
+            'REDMINE_API_KEY': 'default_key'
+        }):
+            client = RedmineClient(api_key='override_key')
+            assert client.api_key == 'override_key'
+            assert client.session.headers['X-Redmine-API-Key'] == 'override_key'
+
+    def test_client_init_without_api_key_uses_default(self):
+        """Test RedmineClient falls back to config API key"""
+        with patch.dict(os.environ, {
+            'REDMINE_DOMAIN': 'https://test.redmine.com',
+            'REDMINE_API_KEY': 'default_key'
+        }):
+            client = RedmineClient()
+            assert client.api_key == 'default_key'
+            assert client.session.headers['X-Redmine-API-Key'] == 'default_key'

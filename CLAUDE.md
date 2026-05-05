@@ -88,8 +88,8 @@ To avoid conflicts with other projects' environment variables, redmine-mcp uses 
   - `REDMINE_MCP_TIMEOUT`: Request timeout (seconds)
   - `REDMINE_TIMEOUT`: Backward-compatible timeout setting
 
-### Available MCP Tools (26)
-- **Management Tools**: server_info, health_check, refresh_cache
+### Available MCP Tools (29)
+- **Management Tools**: server_info, health_check, refresh_cache, list_user_profiles, set_current_user, get_current_user
 - **Query Tools**: get_issue, list_project_issues, get_projects, get_issue_statuses, get_trackers, get_priorities, get_time_entry_activities, get_document_categories, search_issues, get_my_issues
 - **Journal Tools**: list_issue_journals, get_journal
 - **Attachment Tools**: get_attachment_info, get_attachment_image ✨ New (supports thumbnail and visual analysis)
@@ -119,13 +119,47 @@ uv run python -m pytest tests/
 uv add <package-name>
 ```
 
+## Multi-User Support ✨
+
+### Named User Profiles
+The server supports multiple Redmine users via named profiles stored in `~/.redmine_mcp/users.json`:
+
+```json
+{
+  "alice": {"api_key": "alice_key", "description": "Project Manager"},
+  "bob": {"api_key": "bob_key", "description": "Developer"}
+}
+```
+
+**Recommended workflow** — set the current user once per session:
+```python
+set_current_user(profile_name="alice")
+get_issue(123)
+create_new_issue(project_id=1, subject="Bug")
+```
+
+All tools also accept an explicit `profile_name` for one-off calls:
+```python
+get_issue(123, profile_name="alice")
+create_new_issue(project_id=1, subject="Bug", profile_name="bob")
+```
+
+When `profile_name` is omitted and no default user is set, the `REDMINE_API_KEY` from `.env` is used.
+Each profile gets an isolated client with its own cache file.
+
+Environment variable for default profile:
+```env
+REDMINE_DEFAULT_PROFILE=alice
+```
+
 ## Smart Cache System ✨
 
 ### Cache Mechanism Features
 - **Multi-Domain Support**: Automatically creates independent cache files based on Redmine domain
+- **Multi-User Support**: Each profile gets isolated cache files based on API key
 - **Auto-Update**: Cache data automatically refreshes every 24 hours
 - **Full Coverage**: Caches enum values (priority, status, tracker) and user data
-- **File Location**: `~/.redmine_mcp/cache_{domain}_{hash}.json`
+- **File Location**: `~/.redmine_mcp/cache_{domain}_{hash}_{key_hash}.json`
 
 ### Available Helper Functions
 ```python
@@ -155,6 +189,7 @@ client.refresh_cache()
 
 ### MCP Tools
 - `refresh_cache()`: Manually refresh cache and display statistics
+- `list_user_profiles()`: List available MCP user profiles configured on this server
 
 ## Name Parameter Support ✨
 
