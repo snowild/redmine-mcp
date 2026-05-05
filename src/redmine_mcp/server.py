@@ -619,6 +619,46 @@ def get_projects(profile_name: str = None) -> str:
 
 
 @mcp.tool()
+def get_project_members(project_id: int, profile_name: str = None) -> str:
+    """
+    Get project members with their roles.
+    
+    Unlike list_users/search_users, this endpoint only requires project membership
+    and does not need the global 'View users' permission.
+    
+    Args:
+        project_id: Project ID
+    
+    Returns:
+        Formatted list of project members
+    """
+    try:
+        client = get_client(api_key=_resolve_user(profile_name))
+        memberships = client.get_project_members(project_id)
+        
+        if not memberships:
+            return f"Project #{project_id} has no members or you do not have access."
+        
+        result = f"Project #{project_id} members ({len(memberships)}):\n\n"
+        result += f"{'ID':<6} {'Name':<25} {'Roles':<30}\n"
+        result += f"{'-'*6} {'-'*25} {'-'*30}\n"
+        
+        for m in memberships:
+            user = m.get('user', {})
+            user_id = user.get('id', 'N/A')
+            user_name = user.get('name', 'N/A')[:23]
+            roles = ', '.join([r.get('name', '') for r in m.get('roles', [])])
+            result += f"{user_id:<6} {user_name:<25} {roles:<30}\n"
+        
+        return result
+        
+    except RedmineAPIError as e:
+        return f"Failed to get project members: {str(e)}"
+    except Exception as e:
+        return f"System error: {str(e)}"
+
+
+@mcp.tool()
 def search_issues(query: str, project_id: int = None, limit: int = 10, profile_name: str = None) -> str:
     """
     Search for issues (search keywords in title or description)

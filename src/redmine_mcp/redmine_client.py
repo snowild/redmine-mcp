@@ -396,6 +396,16 @@ class RedmineClient:
         
         return projects
     
+    def get_project_members(self, project_id: Union[int, str], limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+        """Get project members (users with their roles).
+        
+        This endpoint does not require global 'View users' permission —
+        only project membership is needed.
+        """
+        params = {'limit': limit, 'offset': offset}
+        response = self._make_request('GET', f'/projects/{project_id}/memberships.json', params=params)
+        return response.get('memberships', [])
+    
     def create_project(self, name: str, identifier: str, description: str = "",
                       homepage: str = "", is_public: bool = True, parent_id: Optional[int] = None,
                       inherit_members: bool = False, tracker_ids: Optional[List[int]] = None,
