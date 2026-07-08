@@ -5,8 +5,9 @@ Provide MCP tools integrated with Redmine system
 
 import os
 import argparse
-from typing import Any
+from typing import Any, List
 from datetime import datetime
+from pathlib import Path
 
 # Ensure configuration is loaded before FastMCP initialization
 # This will handle all environment variable settings, including FASTMCP_LOG_LEVEL
@@ -941,7 +942,8 @@ def create_new_issue(project_id: int, subject: str, description: str = "",
                     assigned_to_id: int = None, assigned_to_name: str = None, assigned_to_login: str = None,
                     parent_issue_id: int = None, start_date: str = None, due_date: str = None,
                     estimated_hours: float = None, status_id: int = None, status_name: str = None,
-                    category_id: int = None, category_name: str = None) -> str:
+                    category_id: int = None, category_name: str = None,
+                    file_paths: List[str] = None) -> str:
     """
     Create a new Redmine issue
 
@@ -971,6 +973,7 @@ def create_new_issue(project_id: int, subject: str, description: str = "",
         status_name: initial status name (choose one from status_id, optional)
         category_id: Issue category ID (choose one from category_name, optional, project level)
         category_name: Issue category name (choose one from category_id, optional, project level)
+        file_paths: local file paths to upload as attachments (optional)
 
     Returns:
         Create result message
@@ -1037,6 +1040,11 @@ def create_new_issue(project_id: int, subject: str, description: str = "",
         if estimated_hours is not None and estimated_hours < 0:
             return "Error: Estimated hours cannot be negative"
 
+        # Upload attachments first (fail-fast: no issue is created on failure)
+        uploads = None
+        if file_paths:
+            uploads = client.upload_files(file_paths)
+
         # Create an issue
         new_issue_id = client.create_issue(
             project_id=project_id,
@@ -1051,6 +1059,7 @@ def create_new_issue(project_id: int, subject: str, description: str = "",
             due_date=due_date,
             estimated_hours=estimated_hours,
             category_id=final_category_id,
+            uploads=uploads,
         )
         
         # Get created issue information
@@ -1078,8 +1087,13 @@ Assigned to: {new_issue.assigned_to.get('name', 'Not assigned') if new_issue.ass
         if description:
             result += f"\n\nDescription:\n{description}"
 
+        if file_paths:
+            result += f"\n\nAttached files ({len(file_paths)}):\n" + "\n".join(
+                f"- {Path(p).name}" for p in file_paths
+            )
+
         return result
-        
+
     except RedmineAPIError as e:
         return f"Failed to create issue: {str(e)}"
     except Exception as e:
@@ -2621,6 +2635,66 @@ Download link: {attachment.get('content_url', 'N/A')}"""
         
     except RedmineAPIError as e:
         return f"Failed to obtain attachment information: {str(e)}"
+    except Exception as e:
+        return f"System error: {str(e)}"
+
+
+@mcp.tool()
+def attach_files_to_issue(issue_id: int, file_paths: List[str],
+                          notes: str = "", private: bool = False) -> str:
+    """
+    Upload local files and attach them to an existing Redmine issue
+
+    Uploads every file first; if any file fails to upload, nothing is
+    attached to the issue.
+
+    Args:
+        issue_id: Issue ID
+        file_paths: List of local file paths to upload
+        notes: Optional note added together with the attachments
+        private: Whether the note is private (only applies when notes is provided)
+
+    Returns:
+        Attach result message
+    """
+    try:
+        if not file_paths:
+            return "Error: file_paths cannot be empty"
+
+        client = get_client()
+
+        uploads = client.upload_files(file_paths)
+
+        update_kwargs = {'uploads': uploads}
+        if notes.strip():
+            update_kwargs['notes'] = notes.strip()
+            if private:
+                update_kwargs['private_notes'] = True
+
+        client.update_issue(issue_id, **update_kwargs)
+
+        issue = client.get_issue(issue_id)
+
+        file_lines = []
+        for file_path in file_paths:
+            path = Path(file_path)
+            size_kb = path.stat().st_size / 1024
+            file_lines.append(f"- {path.name} ({size_kb:.1f} KB)")
+
+        result = f"""Files attached successfully!
+
+Issue: #{issue_id} - {issue.subject}
+Attached files ({len(file_paths)}):
+""" + "\n".join(file_lines)
+
+        if notes.strip():
+            privacy_text = "private" if private else "public"
+            result += f"\n\nNote ({privacy_text}):\n{notes.strip()}"
+
+        return result
+
+    except RedmineAPIError as e:
+        return f"Failed to attach files: {str(e)}"
     except Exception as e:
         return f"System error: {str(e)}"
 

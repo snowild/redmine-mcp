@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Any, Union
 from dataclasses import dataclass
 from datetime import datetime
 import json
+import mimetypes
 import os
 from pathlib import Path
 
@@ -252,7 +253,8 @@ class RedmineClient:
                     parent_issue_id: Optional[int] = None, custom_fields: Optional[List[Dict]] = None,
                     start_date: Optional[str] = None, due_date: Optional[str] = None,
                     estimated_hours: Optional[float] = None,
-                    category_id: Optional[int] = None) -> int:
+                    category_id: Optional[int] = None,
+                    uploads: Optional[List[Dict]] = None) -> int:
         """Create a new issue, return issue ID"""
         # Prepare validation data
         validation_data = {
@@ -278,7 +280,10 @@ class RedmineClient:
             raise RedmineAPIError(f"Issue data validation failed: {e}")
         
         issue_data = {'issue': validated_data}
-        
+
+        if uploads:
+            issue_data['issue']['uploads'] = uploads
+
         response = self._make_request('POST', '/issues.json', json=issue_data)
         
         if 'issue' not in response:
@@ -323,7 +328,11 @@ class RedmineClient:
             update_data['issue']['category_id'] = kwargs['category_id']
         if 'custom_fields' in kwargs:
             update_data['issue']['custom_fields'] = kwargs['custom_fields']
-        
+        if 'private_notes' in kwargs:
+            update_data['issue']['private_notes'] = kwargs['private_notes']
+        if 'uploads' in kwargs:
+            update_data['issue']['uploads'] = kwargs['uploads']
+
         if not update_data['issue']:
             raise RedmineAPIError("No fields provided for update")
         
@@ -878,6 +887,56 @@ class RedmineClient:
             return response.content, attachment
         except requests.exceptions.RequestException as e:
             raise RedmineAPIError(f"Failed to download attachment: {str(e)}")
+
+    def upload_file(self, file_path: str) -> Dict[str, Any]:
+        """
+        Upload a local file to Redmine (POST /uploads.json)
+
+        Args:
+            file_path: Local file path
+
+        Returns:
+            Upload descriptor: {'token', 'filename', 'content_type'}
+        """
+        path = Path(file_path)
+        if not path.is_file():
+            raise RedmineAPIError(f"File does not exist or is not a file: {file_path}")
+
+        try:
+            file_content = path.read_bytes()
+        except OSError as e:
+            raise RedmineAPIError(f"Failed to read file {file_path}: {e}")
+
+        content_type = mimetypes.guess_type(path.name)[0] or 'application/octet-stream'
+
+        response = self._make_request(
+            'POST', '/uploads.json',
+            params={'filename': path.name},
+            data=file_content,
+            headers={'Content-Type': 'application/octet-stream'}
+        )
+
+        token = response.get('upload', {}).get('token')
+        if not token:
+            raise RedmineAPIError(f"Upload failed: no upload token returned for {path.name}")
+
+        return {
+            'token': token,
+            'filename': path.name,
+            'content_type': content_type,
+        }
+
+    def upload_files(self, file_paths: List[str]) -> List[Dict[str, Any]]:
+        """
+        Upload multiple local files sequentially (fail-fast)
+
+        Args:
+            file_paths: List of local file paths
+
+        Returns:
+            List of upload descriptors suitable for an issue 'uploads' payload
+        """
+        return [self.upload_file(file_path) for file_path in file_paths]
 
 
 # Global client instance

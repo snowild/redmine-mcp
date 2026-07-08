@@ -421,9 +421,9 @@ claude mcp add redmine "/Users/YOUR_USERNAME/.local/bin/redmine-mcp" \
 > **Important Notes:**
 > - Always restart Claude Code after updating MCP server
 > - Use `--force --reinstall` flags to ensure clean installation
-> - Check tool count in `/mcp` to verify update (current: 26 tools)
+> - Check tool count in `/mcp` to verify update (current: 36 tools)
 
-## 🛠️ Available MCP Tools (26 tools)
+## 🛠️ Available MCP Tools (36 tools)
 
 ### Basic Tools
 | Tool Name | Description |
@@ -436,7 +436,7 @@ claude mcp add redmine "/Users/YOUR_USERNAME/.local/bin/redmine-mcp" \
 | Tool Name | Description |
 |-----------|-------------|
 | `get_issue` | Get detailed information of specified issue |
-| `create_new_issue` | Create a new issue (supports name parameters) |
+| `create_new_issue` | Create a new issue (supports name parameters and `file_paths` attachments) |
 | `update_issue_status` | Update issue status |
 | `update_issue_content` | Update issue content (title, description, etc.) |
 | `add_issue_note` | Add notes to issues (supports time tracking) |
@@ -454,6 +454,7 @@ claude mcp add redmine "/Users/YOUR_USERNAME/.local/bin/redmine-mcp" \
 |-----------|-------------|
 | `get_attachment_info` | Get attachment metadata (without downloading) |
 | `get_attachment_image` | Download image for AI visual analysis (supports thumbnail) |
+| `attach_files_to_issue` | Upload local files and attach them to an issue, with optional note |
 
 ### Query Tools
 | Tool Name | Description |

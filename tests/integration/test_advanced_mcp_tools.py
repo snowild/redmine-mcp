@@ -7,9 +7,10 @@ import pytest
 from unittest.mock import patch, Mock
 from redmine_mcp.server import (
     update_issue_content, add_issue_note, assign_issue,
-    create_new_issue, get_my_issues, close_issue
+    create_new_issue, get_my_issues, close_issue,
+    attach_files_to_issue
 )
-from redmine_mcp.redmine_client import RedmineIssue, RedmineProject
+from redmine_mcp.redmine_client import RedmineIssue, RedmineProject, RedmineAPIError
 
 
 class TestAdvancedMCPTools:
@@ -241,7 +242,8 @@ class TestAdvancedMCPTools:
             start_date=None,
             due_date=None,
             estimated_hours=None,
-            category_id=None
+            category_id=None,
+            uploads=None
         )
     
     @patch('redmine_mcp.server.get_client')
@@ -251,8 +253,52 @@ class TestAdvancedMCPTools:
         mock_get_client.return_value = mock_client
         
         result = create_new_issue(1, "  ")
-        
+
         assert "Error: Issue title cannot be empty" in result
+        mock_client.create_issue.assert_not_called()
+
+    @patch('redmine_mcp.server.get_client')
+    def test_create_new_issue_with_files(self, mock_get_client, tmp_path):
+        """Test creating an issue with attachments"""
+        test_file = tmp_path / "spec.pdf"
+        test_file.write_bytes(b"%PDF fake")
+
+        uploads = [{'token': '3.ccc', 'filename': 'spec.pdf',
+                    'content_type': 'application/pdf'}]
+        mock_client = Mock()
+        mock_client.upload_files.return_value = uploads
+        mock_client.create_issue.return_value = 456
+
+        mock_issue = Mock()
+        mock_issue.subject = 'Issue with attachment'
+        mock_issue.project = {'name': 'Test Project'}
+        mock_issue.tracker = {'name': 'Bug'}
+        mock_issue.status = {'name': 'New'}
+        mock_issue.priority = {'name': 'Normal'}
+        mock_issue.assigned_to = None
+        mock_client.get_issue.return_value = mock_issue
+        mock_get_client.return_value = mock_client
+
+        result = create_new_issue(1, "Issue with attachment",
+                                  file_paths=[str(test_file)])
+
+        assert "New issue created successfully" in result
+        assert "spec.pdf" in result
+        mock_client.upload_files.assert_called_once_with([str(test_file)])
+        assert mock_client.create_issue.call_args.kwargs['uploads'] == uploads
+
+    @patch('redmine_mcp.server.get_client')
+    def test_create_new_issue_upload_failure_aborts(self, mock_get_client):
+        """Test issue is not created when an upload fails"""
+        mock_client = Mock()
+        mock_client.upload_files.side_effect = RedmineAPIError(
+            "File does not exist or is not a file: /no/such.txt"
+        )
+        mock_get_client.return_value = mock_client
+
+        result = create_new_issue(1, "Doomed issue", file_paths=['/no/such.txt'])
+
+        assert "Failed to create issue" in result
         mock_client.create_issue.assert_not_called()
     
     @patch('redmine_mcp.server.get_client')
@@ -358,4 +404,87 @@ class TestAdvancedMCPTools:
         result = close_issue(123)
         
         assert "Error: No available shutdown status found" in result
+        mock_client.update_issue.assert_not_called()
+
+
+class TestAttachFilesToIssue:
+    """attach_files_to_issue tool tests"""
+
+    def setup_method(self):
+        """Setup before each test"""
+        with patch.dict(os.environ, {
+            'REDMINE_DOMAIN': 'https://test.redmine.com',
+            'REDMINE_API_KEY': 'test_api_key'
+        }, clear=True), patch('redmine_mcp.config.load_dotenv'):
+            pass
+
+    @patch('redmine_mcp.server.get_client')
+    def test_attach_files_success(self, mock_get_client, tmp_path):
+        """Test attaching files without a note"""
+        test_file = tmp_path / "log.txt"
+        test_file.write_bytes(b"some log content")
+
+        mock_client = Mock()
+        mock_client.upload_files.return_value = [
+            {'token': '1.aaa', 'filename': 'log.txt', 'content_type': 'text/plain'}
+        ]
+        mock_issue = Mock()
+        mock_issue.subject = 'Test Issue'
+        mock_client.get_issue.return_value = mock_issue
+        mock_get_client.return_value = mock_client
+
+        result = attach_files_to_issue(123, [str(test_file)])
+
+        assert "Files attached successfully" in result
+        assert "log.txt" in result
+        mock_client.upload_files.assert_called_once_with([str(test_file)])
+        mock_client.update_issue.assert_called_once_with(
+            123,
+            uploads=[{'token': '1.aaa', 'filename': 'log.txt', 'content_type': 'text/plain'}]
+        )
+
+    @patch('redmine_mcp.server.get_client')
+    def test_attach_files_with_private_note(self, mock_get_client, tmp_path):
+        """Test attaching files together with a private note"""
+        test_file = tmp_path / "screenshot.png"
+        test_file.write_bytes(b"\x89PNG fake")
+
+        uploads = [{'token': '2.bbb', 'filename': 'screenshot.png', 'content_type': 'image/png'}]
+        mock_client = Mock()
+        mock_client.upload_files.return_value = uploads
+        mock_issue = Mock()
+        mock_issue.subject = 'Test Issue'
+        mock_client.get_issue.return_value = mock_issue
+        mock_get_client.return_value = mock_client
+
+        result = attach_files_to_issue(123, [str(test_file)], notes="see screenshot", private=True)
+
+        assert "Files attached successfully" in result
+        assert "see screenshot" in result
+        assert "private" in result
+        mock_client.update_issue.assert_called_once_with(
+            123, uploads=uploads, notes="see screenshot", private_notes=True
+        )
+
+    @patch('redmine_mcp.server.get_client')
+    def test_attach_files_empty_list(self, mock_get_client):
+        """Test empty file_paths is rejected"""
+        result = attach_files_to_issue(123, [])
+
+        assert "Error" in result
+        mock_get_client.return_value.update_issue.assert_not_called()
+
+    @patch('redmine_mcp.server.get_client')
+    def test_attach_files_upload_failure_aborts(self, mock_get_client):
+        """Test upload failure aborts without touching the issue"""
+        mock_client = Mock()
+        mock_client.upload_files.side_effect = RedmineAPIError(
+            "File does not exist or is not a file: /no/such.txt"
+        )
+        mock_get_client.return_value = mock_client
+
+        result = attach_files_to_issue(123, ['/no/such.txt'])
+
+        assert "Failed to attach files" in result
+        assert "/no/such.txt" in result
         mock_client.update_issue.assert_not_called()

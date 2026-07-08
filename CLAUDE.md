@@ -88,14 +88,14 @@ To avoid conflicts with other projects' environment variables, redmine-mcp uses 
   - `REDMINE_MCP_TIMEOUT`: Request timeout (seconds)
   - `REDMINE_TIMEOUT`: Backward-compatible timeout setting
 
-### Available MCP Tools (26)
+### Available MCP Tools (36)
 - **Management Tools**: server_info, health_check, refresh_cache
 - **Query Tools**: get_issue, list_project_issues, get_projects, get_issue_statuses, get_trackers, get_priorities, get_time_entry_activities, get_document_categories, search_issues, get_my_issues
 - **Journal Tools**: list_issue_journals, get_journal
-- **Attachment Tools**: get_attachment_info, get_attachment_image ✨ New (supports thumbnail and visual analysis)
+- **Attachment Tools**: get_attachment_info, get_attachment_image (supports thumbnail and visual analysis), attach_files_to_issue ✨ New (upload local files to an issue)
 - **User Tools**: search_users, list_users, get_user
 - **Editing Tools**: update_issue_status, update_issue_content, add_issue_note (supports time entry recording), assign_issue, close_issue
-- **Creation Tools**: create_new_issue (supports name parameters)
+- **Creation Tools**: create_new_issue (supports name parameters and file attachments)
 
 ## Common Commands
 
@@ -293,6 +293,29 @@ get_attachment_image(attachment_id=123, thumbnail=False)
 ### Limitations
 - File size limit: 10 MB
 - Default thumbnail size: 800 px (max edge length)
+
+## File Upload Feature ✨
+
+### Attach Files to an Existing Issue
+```python
+# Attach files only
+attach_files_to_issue(issue_id=123, file_paths=["/path/to/log.txt"])
+
+# Attach files with a note
+attach_files_to_issue(issue_id=123, file_paths=["/path/a.png", "/path/b.pdf"],
+                      notes="Attached screenshots", private=False)
+```
+
+### Create an Issue with Attachments
+```python
+create_new_issue(project_id=1, subject="Bug report",
+                 file_paths=["/path/to/screenshot.png"])
+```
+
+### Behavior
+- Multiple files per call are supported
+- Fail-fast: if any file fails to upload, nothing is attached / no issue is created
+- File size limits are enforced by the Redmine server (oversized files return a friendly error)
 
 ## Time Entry Feature ✨
 

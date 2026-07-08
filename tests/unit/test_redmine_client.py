@@ -211,8 +211,134 @@ class TestRedmineClient:
         mock_request.side_effect = RedmineAPIError("Connection failed")
         
         result = self.client.test_connection()
-        
+
         assert result is False
+
+    @patch('requests.Session.request')
+    def test_upload_file_success(self, mock_request, tmp_path):
+        """Test successful file upload returns token dict"""
+        test_file = tmp_path / "report.txt"
+        test_file.write_bytes(b"hello redmine")
+
+        mock_response = Mock()
+        mock_response.json.return_value = {'upload': {'token': '123.abc456'}}
+        mock_response.content = b'{"upload": {"token": "123.abc456"}}'
+        mock_request.return_value = mock_response
+
+        result = self.client.upload_file(str(test_file))
+
+        assert result == {
+            'token': '123.abc456',
+            'filename': 'report.txt',
+            'content_type': 'text/plain',
+        }
+        args, kwargs = mock_request.call_args
+        assert args[0] == 'POST'
+        assert args[1].endswith('/uploads.json')
+        assert kwargs['params'] == {'filename': 'report.txt'}
+        assert kwargs['data'] == b"hello redmine"
+        assert kwargs['headers'] == {'Content-Type': 'application/octet-stream'}
+
+    def test_upload_file_not_found(self):
+        """Test upload of nonexistent path raises friendly error"""
+        with pytest.raises(RedmineAPIError, match="does not exist"):
+            self.client.upload_file('/no/such/file.txt')
+
+    def test_upload_file_directory(self, tmp_path):
+        """Test upload of a directory path raises friendly error"""
+        with pytest.raises(RedmineAPIError, match="does not exist"):
+            self.client.upload_file(str(tmp_path))
+
+    @patch('requests.Session.request')
+    def test_upload_file_unknown_mime_falls_back(self, mock_request, tmp_path):
+        """Test unknown extension falls back to application/octet-stream"""
+        test_file = tmp_path / "data.xyz123"
+        test_file.write_bytes(b"\x00\x01")
+
+        mock_response = Mock()
+        mock_response.json.return_value = {'upload': {'token': '9.def'}}
+        mock_response.content = b'{"upload": {"token": "9.def"}}'
+        mock_request.return_value = mock_response
+
+        result = self.client.upload_file(str(test_file))
+
+        assert result['content_type'] == 'application/octet-stream'
+
+    @patch('requests.Session.request')
+    def test_upload_file_no_token_in_response(self, mock_request, tmp_path):
+        """Test missing token in response raises error"""
+        test_file = tmp_path / "a.txt"
+        test_file.write_bytes(b"x")
+
+        mock_response = Mock()
+        mock_response.json.return_value = {}
+        mock_response.content = b'{}'
+        mock_request.return_value = mock_response
+
+        with pytest.raises(RedmineAPIError, match="no upload token"):
+            self.client.upload_file(str(test_file))
+
+    @patch('requests.Session.request')
+    def test_upload_files_multiple(self, mock_request, tmp_path):
+        """Test multi-file upload returns uploads array in order"""
+        file_a = tmp_path / "a.txt"
+        file_a.write_bytes(b"a")
+        file_b = tmp_path / "b.png"
+        file_b.write_bytes(b"b")
+
+        responses = []
+        for token in ('1.aaa', '2.bbb'):
+            mock_response = Mock()
+            mock_response.json.return_value = {'upload': {'token': token}}
+            mock_response.content = b'{"upload": {}}'
+            responses.append(mock_response)
+        mock_request.side_effect = responses
+
+        result = self.client.upload_files([str(file_a), str(file_b)])
+
+        assert [u['token'] for u in result] == ['1.aaa', '2.bbb']
+        assert [u['filename'] for u in result] == ['a.txt', 'b.png']
+
+    def test_upload_files_fail_fast(self, tmp_path):
+        """Test upload_files aborts on first missing file"""
+        with pytest.raises(RedmineAPIError, match="does not exist"):
+            self.client.upload_files([str(tmp_path / "missing.txt")])
+
+    @patch('requests.Session.request')
+    def test_update_issue_with_uploads(self, mock_request):
+        """Test update_issue includes uploads and private_notes in payload"""
+        mock_response = Mock()
+        mock_response.json.return_value = {}
+        mock_response.content = b''
+        mock_request.return_value = mock_response
+
+        uploads = [{'token': '1.aaa', 'filename': 'a.txt', 'content_type': 'text/plain'}]
+        result = self.client.update_issue(
+            123, notes='see attachment', uploads=uploads, private_notes=True
+        )
+
+        assert result is True
+        args, kwargs = mock_request.call_args
+        assert kwargs['json']['issue']['uploads'] == uploads
+        assert kwargs['json']['issue']['private_notes'] is True
+        assert kwargs['json']['issue']['notes'] == 'see attachment'
+
+    @patch('requests.Session.request')
+    def test_create_issue_with_uploads(self, mock_request):
+        """Test create_issue includes uploads in payload"""
+        mock_response = Mock()
+        mock_response.json.return_value = {'issue': {'id': 456}}
+        mock_response.content = b'{"issue": {"id": 456}}'
+        mock_request.return_value = mock_response
+
+        uploads = [{'token': '1.aaa', 'filename': 'a.txt', 'content_type': 'text/plain'}]
+        issue_id = self.client.create_issue(
+            project_id=1, subject='With attachment', uploads=uploads
+        )
+
+        assert issue_id == 456
+        args, kwargs = mock_request.call_args
+        assert kwargs['json']['issue']['uploads'] == uploads
 
 
 class TestClientSingleton:
