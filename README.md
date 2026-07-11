@@ -272,6 +272,39 @@ environment:
 docker compose up -d
 ```
 
+#### Enabling File Uploads in Docker
+
+The file-upload tools (`attach_files_to_issue` and `create_new_issue` with
+`file_paths`) read local files from the **MCP server's own filesystem**. When
+the server runs inside a container, host files are invisible unless the host
+directory is mounted as a volume — otherwise uploads fail with
+`File does not exist or is not a file: ...`.
+
+Mount the directory holding your upload sources at the **same path** inside the
+container (read-only is sufficient), so the absolute paths you pass resolve on
+both sides:
+
+```yaml
+services:
+  redmine-mcp:
+    # ...
+    volumes:
+      - /Users/you/workspace:/Users/you/workspace:ro
+```
+
+Then recreate the container so the volume takes effect:
+
+```bash
+docker compose up -d --force-recreate
+```
+
+Notes:
+- Only files under the mounted directory can be uploaded; paths outside it
+  (e.g. `~/Desktop`, `~/Downloads`) still fail unless also mounted.
+- Pass **absolute paths** under the mounted directory to the upload tools.
+- This is unnecessary in `stdio` mode, where the server runs on the host and
+  reads local paths natively.
+
 ### Connecting Claude Code to SSE Server
 
 Once the SSE server is running, configure Claude Code to connect:

@@ -8,14 +8,21 @@ services:
     ports:
       - "8000:8000"
     environment:
-      # Required configuration - please update with your Redmine settings
-      - REDMINE_DOMAIN=https://your-redmine-domain.com
-      - REDMINE_API_KEY=your_api_key_here
+      # Required configuration - loaded from .env in this directory
+      - REDMINE_DOMAIN=${REDMINE_DOMAIN}
+      - REDMINE_API_KEY=${REDMINE_API_KEY}
       # Optional configuration
       - REDMINE_MCP_PORT=8000
       - REDMINE_MCP_HOST=0.0.0.0
       - REDMINE_MCP_LOG_LEVEL=INFO
       - REDMINE_MCP_TIMEOUT=30
+    # Mount host files (read-only) so path-based uploads can read local files.
+    # The container reads file_paths from ITS OWN filesystem, so the host
+    # directory must be mounted at the SAME path inside the container for the
+    # paths passed to attach_files_to_issue / create_new_issue to resolve.
+    # Adjust the host path to wherever your upload sources live.
+    volumes:
+      - /Users/jacktsai/workspace:/Users/jacktsai/workspace:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8000/sse", "--max-time", "5"]
