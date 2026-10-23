@@ -88,6 +88,58 @@ class TestAdvancedMCPTools:
         
         assert "Error: Complete percentage must be between 0-100" in result
         mock_client.update_issue.assert_not_called()
+
+    def _version_client(self, mock_get_client):
+        mock_client = Mock()
+        mock_client.get_issue.return_value = RedmineIssue(
+            id=123, subject='T', description='', status={'name': 'New'},
+            priority={'name': 'Normal'}, project={'name': 'P', 'id': 1},
+            tracker={'name': 'Bug'}, author={'name': 'U'})
+        mock_client.get_versions.return_value = [{'id': 7, 'name': 'v1.0'}, {'id': 8, 'name': 'v2.0'}]
+        mock_get_client.return_value = mock_client
+        return mock_client
+
+    @patch('redmine_mcp.server.get_client')
+    def test_update_issue_content_version_id(self, mock_get_client):
+        """Test updating target version by ID"""
+        mock_client = self._version_client(mock_get_client)
+
+        result = update_issue_content(123, version_id=8)
+
+        assert "Target version ID: 8" in result
+        mock_client.update_issue.assert_called_once_with(123, fixed_version_id=8)
+
+    @patch('redmine_mcp.server.get_client')
+    def test_update_issue_content_version_name(self, mock_get_client):
+        """Test updating target version by name"""
+        mock_client = self._version_client(mock_get_client)
+
+        result = update_issue_content(123, version_name="v1.0")
+
+        assert "Target version ID: 7" in result
+        mock_client.get_versions.assert_called_once_with(1)
+        mock_client.update_issue.assert_called_once_with(123, fixed_version_id=7)
+
+    @patch('redmine_mcp.server.get_client')
+    def test_update_issue_content_version_name_not_found(self, mock_get_client):
+        """Test unknown version name lists available versions"""
+        mock_client = self._version_client(mock_get_client)
+
+        result = update_issue_content(123, version_name="v9")
+
+        assert 'Version name not found or not open: "v9"' in result
+        assert "- v1.0" in result and "- v2.0" in result
+        mock_client.update_issue.assert_not_called()
+
+    @patch('redmine_mcp.server.get_client')
+    def test_update_issue_content_remove_version(self, mock_get_client):
+        """Test clearing target version"""
+        mock_client = self._version_client(mock_get_client)
+
+        result = update_issue_content(123, remove_version=True)
+
+        assert "Remove target version" in result
+        mock_client.update_issue.assert_called_once_with(123, fixed_version_id=None)
     
     @patch('redmine_mcp.server.get_client')
     def test_add_issue_note_success(self, mock_get_client):
@@ -243,6 +295,7 @@ class TestAdvancedMCPTools:
             due_date=None,
             estimated_hours=None,
             category_id=None,
+            fixed_version_id=None,
             uploads=None
         )
     
@@ -286,6 +339,40 @@ class TestAdvancedMCPTools:
         assert "spec.pdf" in result
         mock_client.upload_files.assert_called_once_with([str(test_file)])
         assert mock_client.create_issue.call_args.kwargs['uploads'] == uploads
+
+    @patch('redmine_mcp.server.get_client')
+    def test_create_new_issue_with_version_id(self, mock_get_client):
+        """Test creating an issue with target version ID"""
+        mock_client = self._version_client(mock_get_client)
+        mock_client.create_issue.return_value = 123
+
+        result = create_new_issue(1, "Versioned", version_id=8)
+
+        assert "New issue created successfully" in result
+        assert mock_client.create_issue.call_args.kwargs['fixed_version_id'] == 8
+        mock_client.get_versions.assert_not_called()
+
+    @patch('redmine_mcp.server.get_client')
+    def test_create_new_issue_with_version_name(self, mock_get_client):
+        """Test creating an issue with target version name"""
+        mock_client = self._version_client(mock_get_client)
+        mock_client.create_issue.return_value = 123
+
+        create_new_issue(1, "Versioned", version_name="v1.0")
+
+        mock_client.get_versions.assert_called_once_with(1)
+        assert mock_client.create_issue.call_args.kwargs['fixed_version_id'] == 7
+
+    @patch('redmine_mcp.server.get_client')
+    def test_create_new_issue_version_name_not_found(self, mock_get_client):
+        """Test unknown version name aborts issue creation"""
+        mock_client = self._version_client(mock_get_client)
+
+        result = create_new_issue(1, "Versioned", version_name="v9")
+
+        assert 'Version name not found or not open: "v9"' in result
+        assert "- v1.0" in result and "- v2.0" in result
+        mock_client.create_issue.assert_not_called()
 
     @patch('redmine_mcp.server.get_client')
     def test_create_new_issue_upload_failure_aborts(self, mock_get_client):

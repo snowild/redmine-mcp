@@ -324,6 +324,30 @@ class TestRedmineClient:
         assert kwargs['json']['issue']['notes'] == 'see attachment'
 
     @patch('requests.Session.request')
+    def test_update_issue_with_fixed_version(self, mock_request):
+        """Test update_issue includes fixed_version_id in payload"""
+        mock_response = Mock()
+        mock_response.content = b''
+        mock_request.return_value = mock_response
+
+        self.client.update_issue(123, fixed_version_id=7)
+
+        args, kwargs = mock_request.call_args
+        assert kwargs['json']['issue']['fixed_version_id'] == 7
+
+    @patch('requests.Session.request')
+    def test_update_issue_clear_fixed_version(self, mock_request):
+        """Test update_issue sends empty fixed_version_id to clear target version"""
+        mock_response = Mock()
+        mock_response.content = b''
+        mock_request.return_value = mock_response
+
+        self.client.update_issue(123, fixed_version_id=None)
+
+        args, kwargs = mock_request.call_args
+        assert kwargs['json']['issue']['fixed_version_id'] == ""
+
+    @patch('requests.Session.request')
     def test_create_issue_with_uploads(self, mock_request):
         """Test create_issue includes uploads in payload"""
         mock_response = Mock()
@@ -339,6 +363,38 @@ class TestRedmineClient:
         assert issue_id == 456
         args, kwargs = mock_request.call_args
         assert kwargs['json']['issue']['uploads'] == uploads
+
+    @patch('requests.Session.request')
+    def test_create_issue_with_fixed_version(self, mock_request):
+        """Test create_issue sends fixed_version_id only when given"""
+        mock_response = Mock()
+        mock_response.json.return_value = {'issue': {'id': 456}}
+        mock_response.content = b'{"issue": {"id": 456}}'
+        mock_request.return_value = mock_response
+
+        self.client.create_issue(project_id=1, subject='Versioned', fixed_version_id=7)
+        assert mock_request.call_args.kwargs['json']['issue']['fixed_version_id'] == 7
+
+        self.client.create_issue(project_id=1, subject='No version')
+        assert 'fixed_version_id' not in mock_request.call_args.kwargs['json']['issue']
+
+
+    @patch('requests.Session.request')
+    def test_get_versions_only_open(self, mock_request):
+        """Test get_versions filters out locked and closed versions"""
+        mock_response = Mock()
+        mock_response.json.return_value = {'versions': [
+            {'id': 1, 'name': 'v1.0', 'status': 'closed'},
+            {'id': 2, 'name': 'v2.0', 'status': 'locked'},
+            {'id': 3, 'name': 'v3.0', 'status': 'open'},
+        ]}
+        mock_response.content = b'{}'
+        mock_request.return_value = mock_response
+
+        versions = self.client.get_versions(1)
+
+        assert [v['name'] for v in versions] == ['v3.0']
+        assert mock_request.call_args.args[1].endswith('/projects/1/versions.json')
 
 
 class TestClientSingleton:

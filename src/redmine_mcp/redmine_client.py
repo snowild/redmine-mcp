@@ -254,6 +254,7 @@ class RedmineClient:
                     start_date: Optional[str] = None, due_date: Optional[str] = None,
                     estimated_hours: Optional[float] = None,
                     category_id: Optional[int] = None,
+                    fixed_version_id: Optional[int] = None,
                     uploads: Optional[List[Dict]] = None) -> int:
         """Create a new issue, return issue ID"""
         # Prepare validation data
@@ -271,6 +272,7 @@ class RedmineClient:
             'due_date': due_date,
             'estimated_hours': estimated_hours,
             'category_id': category_id,
+            'fixed_version_id': fixed_version_id,
         }
         
         # Validate data
@@ -326,6 +328,10 @@ class RedmineClient:
             update_data['issue']['notes'] = kwargs['notes']
         if 'category_id' in kwargs:
             update_data['issue']['category_id'] = kwargs['category_id']
+        if 'fixed_version_id' in kwargs:
+            # If fixed_version_id is None, clear the target version
+            fixed_version_id = kwargs['fixed_version_id']
+            update_data['issue']['fixed_version_id'] = "" if fixed_version_id is None else fixed_version_id
         if 'custom_fields' in kwargs:
             update_data['issue']['custom_fields'] = kwargs['custom_fields']
         if 'private_notes' in kwargs:
@@ -493,6 +499,11 @@ class RedmineClient:
         """Get project issue category list"""
         response = self._make_request('GET', f'/projects/{project_id}/issue_categories.json')
         return response.get('issue_categories', [])
+
+    def get_versions(self, project_id: int) -> List[Dict[str, Any]]:
+        """Get open project versions (including shared versions); locked/closed ones cannot be assigned"""
+        response = self._make_request('GET', f'/projects/{project_id}/versions.json')
+        return [v for v in response.get('versions', []) if v.get('status') == 'open']
 
     def _load_category_cache(self, project_id: int) -> Dict[str, int]:
         """Load issue category cache for the specified project (on-demand loading)"""

@@ -617,9 +617,10 @@ def update_issue_content(issue_id: int, subject: str = None, description: str = 
                         parent_issue_id: int = None, remove_parent: bool = False, start_date: str = None, due_date: str = None,
                         estimated_hours: float = None,
                         category_id: int = None, category_name: str = None,
+                        version_id: int = None, version_name: str = None, remove_version: bool = False,
                         custom_fields: list[dict] = None) -> str:
     """
-    Update issue content (title, description, priority, completion, tracker, category, date, hours, custom fields, etc.)
+    Update issue content (title, description, priority, completion, tracker, category, target version, date, hours, custom fields, etc.)
 
     Args:
         issue_id: Issue ID
@@ -637,6 +638,9 @@ def update_issue_content(issue_id: int, subject: str = None, description: str = 
         estimated_hours: new estimated hours (optional)
         category_id: Issue category ID (choose one from category_name, optional, project level)
         category_name: topic category name (choose one from category_id, optional, you need to obtain the topic first to confirm the project it belongs to)
+        version_id: Target version ID (choose one from version_name, optional)
+        version_name: Target version name (choose one from version_id, optional, looked up in the issue's project versions)
+        remove_version: whether to clear the target version (optional, takes precedence over version_id/version_name)
         custom_fields: Custom fields list (optional), format: [{"id": 23, "value": "2026-03-01"}, ...]
 
     Returns:
@@ -731,6 +735,23 @@ def update_issue_content(issue_id: int, subject: str = None, description: str = 
         if category_id is not None:
             update_data['category_id'] = category_id
             changes.append(f"Category ID: {category_id}")
+
+        if remove_version:
+            update_data['fixed_version_id'] = None
+            changes.append("Remove target version")
+        elif version_name:
+            issue_info = client.get_issue(issue_id)
+            versions = client.get_versions(issue_info.project.get('id'))
+            version_id = next((v['id'] for v in versions if v['name'] == version_name), None)
+            if not version_id:
+                if versions:
+                    return f'Version name not found or not open: "{version_name}"\n\nAvailable open versions for this project: \n' + "\n".join([f"- {v['name']}" for v in versions])
+                else:
+                    return f'Version name not found or not open: "{version_name}"\n\nThis project has no open versions'
+
+        if not remove_version and version_id is not None:
+            update_data['fixed_version_id'] = version_id
+            changes.append(f"Target version ID: {version_id}")
 
         if custom_fields is not None:
             if not isinstance(custom_fields, list):
@@ -943,6 +964,7 @@ def create_new_issue(project_id: int, subject: str, description: str = "",
                     parent_issue_id: int = None, start_date: str = None, due_date: str = None,
                     estimated_hours: float = None, status_id: int = None, status_name: str = None,
                     category_id: int = None, category_name: str = None,
+                    version_id: int = None, version_name: str = None,
                     file_paths: List[str] = None) -> str:
     """
     Create a new Redmine issue
@@ -973,6 +995,8 @@ def create_new_issue(project_id: int, subject: str, description: str = "",
         status_name: initial status name (choose one from status_id, optional)
         category_id: Issue category ID (choose one from category_name, optional, project level)
         category_name: Issue category name (choose one from category_id, optional, project level)
+        version_id: Target version ID (choose one from version_name, optional)
+        version_name: Target version name (choose one from version_id, optional, looked up in the project versions)
         file_paths: local file paths to upload as attachments (optional)
 
     Returns:
@@ -1029,6 +1053,17 @@ def create_new_issue(project_id: int, subject: str, description: str = "",
                 else:
                     return f'Category name not found: "{category_name}"\n\nThis project has not yet set an issue classification'
 
+        # Handle target version parameters
+        final_version_id = version_id
+        if version_name:
+            versions = client.get_versions(project_id)
+            final_version_id = next((v['id'] for v in versions if v['name'] == version_name), None)
+            if not final_version_id:
+                if versions:
+                    return f'Version name not found or not open: "{version_name}"\n\nAvailable open versions for this project: \n' + "\n".join([f"- {v['name']}" for v in versions])
+                else:
+                    return f'Version name not found or not open: "{version_name}"\n\nThis project has no open versions'
+
         # Validate date format
         for date_label, date_val in [("start date", start_date), ("completion date", due_date)]:
             if date_val is not None:
@@ -1059,6 +1094,7 @@ def create_new_issue(project_id: int, subject: str, description: str = "",
             due_date=due_date,
             estimated_hours=estimated_hours,
             category_id=final_category_id,
+            fixed_version_id=final_version_id,
             uploads=uploads,
         )
         
