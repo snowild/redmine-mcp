@@ -88,10 +88,10 @@ To avoid conflicts with other projects' environment variables, redmine-mcp uses 
   - `REDMINE_MCP_TIMEOUT`: Request timeout (seconds)
   - `REDMINE_TIMEOUT`: Backward-compatible timeout setting
 
-### Available MCP Tools (36)
+### Available MCP Tools (37)
 - **Management Tools**: server_info, health_check, refresh_cache
 - **Query Tools**: get_issue, list_project_issues, get_projects, get_issue_statuses, get_trackers, get_priorities, get_time_entry_activities, get_document_categories, search_issues, get_my_issues
-- **Journal Tools**: list_issue_journals, get_journal
+- **Journal Tools**: list_issue_journals, get_journal, update_journal
 - **Attachment Tools**: get_attachment_info, get_attachment_image (supports thumbnail and visual analysis), attach_files_to_issue ✨ New (upload local files to an issue)
 - **User Tools**: search_users, list_users, get_user
 - **Editing Tools**: update_issue_status, update_issue_content, add_issue_note (supports time entry recording), assign_issue, close_issue

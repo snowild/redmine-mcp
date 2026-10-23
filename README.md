@@ -454,9 +454,9 @@ claude mcp add redmine "/Users/YOUR_USERNAME/.local/bin/redmine-mcp" \
 > **Important Notes:**
 > - Always restart Claude Code after updating MCP server
 > - Use `--force --reinstall` flags to ensure clean installation
-> - Check tool count in `/mcp` to verify update (current: 36 tools)
+> - Check tool count in `/mcp` to verify update (current: 37 tools)
 
-## 🛠️ Available MCP Tools (36 tools)
+## 🛠️ Available MCP Tools (37 tools)
 
 ### Basic Tools
 | Tool Name | Description |
@@ -481,6 +481,7 @@ claude mcp add redmine "/Users/YOUR_USERNAME/.local/bin/redmine-mcp" \
 |-----------|-------------|
 | `list_issue_journals` | List all journals/notes for an issue |
 | `get_journal` | Get detailed information of a specific journal |
+| `update_journal` | Update the note content of an existing journal |
 
 ### Attachment Tools ✨ New
 | Tool Name | Description |
