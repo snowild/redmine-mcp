@@ -2274,41 +2274,6 @@ def get_journal(issue_id: int, journal_id: int) -> str:
         return f"System error: {str(e)}"
 
 
-@mcp.tool()
-def update_journal(journal_id: int, notes: str, private: bool = None) -> str:
-    """
-    Update the note content of an existing journal (Redmine has no API to delete a journal)
-
-    Requires the edit_issue_notes permission, or edit_own_issue_notes for your own notes.
-    Changing the private flag also requires the set_notes_private permission.
-    Use list_issue_journals to find the journal ID.
-
-    Args:
-        journal_id: Journal ID
-        notes: New note content (replaces the existing content, cannot be empty)
-        private: Set the note private (True) or public (False); omit to keep unchanged
-
-    Returns:
-        Update result message
-    """
-    try:
-        if not notes.strip():
-            return "Error: Note content cannot be empty"
-
-        client = get_client()
-        client.update_journal(journal_id, notes, private_notes=private)
-
-        result = f"Journal #{journal_id} updated successfully!"
-        if private is not None:
-            result += f"\nPrivate note: {'yes' if private else 'no'}"
-        return result
-
-    except RedmineAPIError as e:
-        return f"Failed to update journal: {str(e)}"
-    except Exception as e:
-        return f"System error: {str(e)}"
-
-
 # Attachment processing related constants
 MAX_ATTACHMENT_SIZE_BYTES = 10 * 1024 * 1024  # 10MB
 MAX_TEXT_OUTPUT_LENGTH = 50000  # Maximum number of characters for text output

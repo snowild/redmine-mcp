@@ -8,7 +8,7 @@ from unittest.mock import patch, Mock
 from redmine_mcp.server import (
     update_issue_content, add_issue_note, assign_issue,
     create_new_issue, get_my_issues, close_issue,
-    attach_files_to_issue, update_journal
+    attach_files_to_issue
 )
 from redmine_mcp.redmine_client import RedmineIssue, RedmineProject, RedmineAPIError
 
@@ -130,40 +130,6 @@ class TestAdvancedMCPTools:
         assert 'Version name not found or not open: "v9"' in result
         assert "- v1.0" in result and "- v2.0" in result
         mock_client.update_issue.assert_not_called()
-
-    @patch('redmine_mcp.server.get_client')
-    def test_update_journal_success(self, mock_get_client):
-        """Test updating journal notes"""
-        mock_client = Mock()
-        mock_get_client.return_value = mock_client
-
-        result = update_journal(5, "edited", private=True)
-
-        assert "Journal #5 updated successfully!" in result
-        assert "Private note: yes" in result
-        mock_client.update_journal.assert_called_once_with(5, "edited", private_notes=True)
-
-    @patch('redmine_mcp.server.get_client')
-    def test_update_journal_empty_notes(self, mock_get_client):
-        """Test empty notes are rejected without calling the API"""
-        mock_client = Mock()
-        mock_get_client.return_value = mock_client
-
-        result = update_journal(5, "   ")
-
-        assert "Error: Note content cannot be empty" in result
-        mock_client.update_journal.assert_not_called()
-
-    @patch('redmine_mcp.server.get_client')
-    def test_update_journal_api_error(self, mock_get_client):
-        """Test journal update failure is reported"""
-        mock_client = Mock()
-        mock_client.update_journal.side_effect = RedmineAPIError("Insufficient permissions")
-        mock_get_client.return_value = mock_client
-
-        result = update_journal(5, "edited")
-
-        assert "Failed to update journal: Insufficient permissions" in result
 
     @patch('redmine_mcp.server.get_client')
     def test_update_issue_content_remove_version(self, mock_get_client):

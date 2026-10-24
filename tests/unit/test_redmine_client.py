@@ -397,23 +397,6 @@ class TestRedmineClient:
         assert mock_request.call_args.args[1].endswith('/projects/1/versions.json')
 
 
-    @patch('requests.Session.request')
-    def test_update_journal(self, mock_request):
-        """Test update_journal sends PUT /journals/{id}.json, private_notes only when given"""
-        mock_response = Mock()
-        mock_response.content = b''
-        mock_request.return_value = mock_response
-
-        assert self.client.update_journal(5, notes='edited') is True
-        args, kwargs = mock_request.call_args
-        assert args[0] == 'PUT'
-        assert args[1].endswith('/journals/5.json')
-        assert kwargs['json'] == {'journal': {'notes': 'edited'}}
-
-        self.client.update_journal(5, notes='secret', private_notes=True)
-        assert mock_request.call_args.kwargs['json'] == {'journal': {'notes': 'secret', 'private_notes': True}}
-
-
 class TestClientSingleton:
     """Test client singleton pattern"""
     

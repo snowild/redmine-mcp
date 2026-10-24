@@ -849,14 +849,6 @@ class RedmineClient:
         issue_data = self.get_issue_raw(issue_id, include=['journals'])
         return issue_data.get('journals', [])
 
-    def update_journal(self, journal_id: int, notes: str, private_notes: Optional[bool] = None) -> bool:
-        """Update a journal's notes (requires a Redmine version with the journal update API)"""
-        journal = {'notes': notes}
-        if private_notes is not None:
-            journal['private_notes'] = private_notes
-        self._make_request('PUT', f'/journals/{journal_id}.json', json={'journal': journal})
-        return True
-
     def test_connection(self) -> bool:
         """Test connection"""
         try:
