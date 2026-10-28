@@ -121,9 +121,9 @@ class RedmineValidator:
 
         # Required field check (on create)
         if not is_update:
-            if 'name' not in data or not data.get('name', '').strip():
+            if 'name' not in data or not (data.get('name') or '').strip():
                 errors.append("Project name (name) is required")
-            if 'identifier' not in data or not data.get('identifier', '').strip():
+            if 'identifier' not in data or not (data.get('identifier') or '').strip():
                 errors.append("Project identifier (identifier) is required")
 
         # Project name validation

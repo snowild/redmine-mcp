@@ -136,7 +136,7 @@ def get_issue(issue_id: int, include_details: bool = True) -> str:
                 result += f"\n| **{cf_name}** (ID:{cf.get('id')}) | {cf.get('value', '')} |"
 
         # describe
-        description = issue_data.get('description', '').strip()
+        description = (issue_data.get('description') or '').strip()
         result += f"\n\n## Description\n\n{description if description else '(no description)'}"
 
         # appendix
@@ -151,13 +151,13 @@ def get_issue(issue_id: int, include_details: bool = True) -> str:
 
         # Notes/History
         if include_details and 'journals' in issue_data and issue_data['journals']:
-            notes_journals = [j for j in issue_data['journals'] if j.get('notes', '').strip()]
+            notes_journals = [j for j in issue_data['journals'] if (j.get('notes') or '').strip()]
             if notes_journals:
                 result += f"\n\n## Remarks record ({len(notes_journals)} Pen)\n"
                 for i, journal in enumerate(notes_journals, 1):
                     author_name = journal.get('user', {}).get('name', 'N/A')
                     created_on = journal.get('created_on', 'N/A')
-                    notes = journal.get('notes', '').strip()
+                    notes = (journal.get('notes') or '').strip()
                     result += f"\n### #{i} - {author_name}（{created_on}）\n\n{notes}\n"
 
         # Sub-topic details
@@ -1530,7 +1530,7 @@ def check_issue_changes(issue_id: int) -> str:
             changes.append(f"New {new_count} Note:")
             for j in current_journals[-new_count:]:
                 author = j.get('user', {}).get('name', 'N/A')
-                notes = j.get('notes', '').strip()
+                notes = (j.get('notes') or '').strip()
                 if notes:
                     preview = notes[:100] + '...' if len(notes) > 100 else notes
                     changes.append(f"  - {author}: {preview}")
@@ -2159,7 +2159,7 @@ def list_issue_journals(issue_id: int, include_property_changes: bool = False) -
         # Filter based on parameters
         if not include_property_changes:
             # Only show records with comments
-            filtered_journals = [j for j in journals if j.get('notes', '').strip()]
+            filtered_journals = [j for j in journals if (j.get('notes') or '').strip()]
         else:
             filtered_journals = journals
         
@@ -2173,7 +2173,7 @@ def list_issue_journals(issue_id: int, include_property_changes: bool = False) -
             journal_id = journal.get('id', 'N/A')
             author = journal.get('user', {}).get('name', 'N/A')
             created_on = journal.get('created_on', 'N/A')
-            notes = journal.get('notes', '').strip()
+            notes = (journal.get('notes') or '').strip()
             private_notes = journal.get('private_notes', False)
             details = journal.get('details', [])
             
@@ -2237,7 +2237,7 @@ def get_journal(issue_id: int, journal_id: int) -> str:
         author = target_journal.get('user', {}).get('name', 'N/A')
         author_id = target_journal.get('user', {}).get('id', 'N/A')
         created_on = target_journal.get('created_on', 'N/A')
-        notes = target_journal.get('notes', '').strip()
+        notes = (target_journal.get('notes') or '').strip()
         private_notes = target_journal.get('private_notes', False)
         details = target_journal.get('details', [])
         
