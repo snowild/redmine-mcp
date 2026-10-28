@@ -50,8 +50,9 @@ USER mcp
 EXPOSE 8000
 
 # Health check (check if SSE endpoint responds)
+# /sse is a never-ending stream, so curl always exits 28 (timeout); check the HTTP status code instead
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD curl -sf http://localhost:8000/sse --max-time 5 > /dev/null || exit 1
+    CMD curl -s -o /dev/null -w '%{http_code}' --max-time 2 http://localhost:8000/sse | grep -q 200 || exit 1
 
 # Start service
 CMD ["python", "-m", "redmine_mcp.server", "--transport", "sse"]

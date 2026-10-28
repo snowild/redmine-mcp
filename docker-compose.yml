@@ -25,7 +25,9 @@ services:
       - /Users/jacktsai/workspace:/Users/jacktsai/workspace:ro
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-sf", "http://localhost:8000/sse", "--max-time", "5"]
+      # /sse 是不會自己結束的串流：curl 一定等到 --max-time 逾時（exit 28），
+      # 所以只看 HTTP 狀態碼，不看 curl 的 exit code
+      test: ["CMD-SHELL", "curl -s -o /dev/null -w '%{http_code}' --max-time 2 http://localhost:8000/sse | grep -q 200"]
       interval: 30s
       timeout: 10s
       retries: 3
