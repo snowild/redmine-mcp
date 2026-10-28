@@ -433,6 +433,40 @@ class TestAdvancedMCPTools:
         )
     
     @patch('redmine_mcp.server.get_client')
+    def test_get_my_issues_includes_tracker_column(self, mock_get_client):
+        """The table has a tracker column aligned with the dash row, so clients can filter by tracker"""
+        mock_client = Mock()
+        mock_client.get_current_user.return_value = {'id': 1, 'firstname': 'T', 'lastname': 'U'}
+        mock_client.list_issues.return_value = [
+            RedmineIssue(
+                id=101, subject='My Issue', description=None,
+                status={'name': '實作中'}, priority={'name': 'Normal'},
+                project={'name': '專案甲', 'id': 1}, tracker={'name': 'Refactoring-long-name'},
+                author={'name': 'X'}, updated_on='2024-01-01T00:00:00Z',
+            )
+        ]
+        mock_get_client.return_value = mock_client
+
+        lines = get_my_issues("open", 10).split('\n')
+        dash = next(i for i, l in enumerate(lines) if l.startswith('-----'))
+        widths = [len(seg) for seg in lines[dash].split(' ')]
+
+        def cells(line):
+            out, at = [], 0
+            for i, w in enumerate(widths):
+                end = len(line) if i == len(widths) - 1 else at + w
+                out.append(line[at:end].strip())
+                at = end + 1
+            return out
+
+        header = cells(lines[dash - 1])
+        row = dict(zip(header, cells(lines[dash + 1])))
+        assert 'tracker' in header
+        assert row['tracker'] == 'Refactorin'  # truncated to the column width
+        assert row['state'] == '實作中'
+        assert row['Update time'] == '2024-01-01'
+
+    @patch('redmine_mcp.server.get_client')
     def test_close_issue_success(self, mock_get_client):
         """Test closing issue successfully"""
         mock_client = Mock()
