@@ -1183,8 +1183,8 @@ def get_my_issues(status_filter: str = "open", limit: int = 20) -> str:
 Status filter: {status_filter}
 Found {len(issues)} issues:
 
-{"ID":<8} {"title":<35} {"project":<15} {"tracker":<10} {"state":<12} {"Update time":<10}
-{"-"*8} {"-"*35} {"-"*15} {"-"*10} {"-"*12} {"-"*10}"""
+{"ID":<8} {"title":<35} {"project":<15} {"tracker":<10} {"state":<12} {"Update time":<11} {"start":<10} {"due":<10}
+{"-"*8} {"-"*35} {"-"*15} {"-"*10} {"-"*12} {"-"*11} {"-"*10} {"-"*10}"""
 
         for issue in issues:
             title = issue.subject[:32] + "..." if len(issue.subject) > 35 else issue.subject
@@ -1192,8 +1192,10 @@ Found {len(issues)} issues:
             tracker = (issue.tracker or {}).get('name', 'N/A')[:10]
             status = issue.status.get('name', 'N/A')[:10]
             updated = issue.updated_on[:10] if issue.updated_on else 'N/A'
+            start = (issue.start_date or '')[:10]
+            due = (issue.due_date or '')[:10]
             
-            result += f"\n{issue.id:<8} {title:<35} {project_name:<15} {tracker:<10} {status:<12} {updated:<10}"
+            result += f"\n{issue.id:<8} {title:<35} {project_name:<15} {tracker:<10} {status:<12} {updated:<11} {start:<10} {due:<10}"
         
         return result
         

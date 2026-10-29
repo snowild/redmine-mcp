@@ -149,6 +149,24 @@ class TestRedmineClient:
         assert all(isinstance(issue, RedmineIssue) for issue in issues)
         assert issues[0].subject == 'Issue1'
         assert issues[1].subject == 'Issue2'
+
+    @patch('requests.Session.request')
+    def test_list_issues_reads_start_and_due_dates(self, mock_request):
+        """start_date / due_date come through; missing ones stay None"""
+        base = {'subject': 'S', 'status': {'name': 'New'}, 'priority': {'name': 'Normal'},
+                'project': {'name': 'P'}, 'tracker': {'name': 'Bug'}, 'author': {'name': 'U'}}
+        mock_response = Mock()
+        mock_response.json.return_value = {'issues': [
+            {**base, 'id': 1, 'start_date': '2026-10-26', 'due_date': '2026-11-01'},
+            {**base, 'id': 2},
+        ]}
+        mock_response.content = b'content'
+        mock_request.return_value = mock_response
+
+        dated, undated = self.client.list_issues()
+
+        assert (dated.start_date, dated.due_date) == ('2026-10-26', '2026-11-01')
+        assert (undated.start_date, undated.due_date) == (None, None)
     
     @patch('requests.Session.request')
     def test_update_issue_success(self, mock_request):

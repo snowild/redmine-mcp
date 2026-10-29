@@ -31,6 +31,8 @@ class RedmineIssue:
     created_on: Optional[str] = None
     updated_on: Optional[str] = None
     done_ratio: int = 0
+    start_date: Optional[str] = None
+    due_date: Optional[str] = None
 
 
 @dataclass
@@ -242,7 +244,9 @@ class RedmineClient:
                 assigned_to=issue_data.get('assigned_to'),
                 created_on=issue_data.get('created_on'),
                 updated_on=issue_data.get('updated_on'),
-                done_ratio=issue_data.get('done_ratio', 0)
+                done_ratio=issue_data.get('done_ratio', 0),
+                start_date=issue_data.get('start_date'),
+                due_date=issue_data.get('due_date')
             ))
         
         return issues

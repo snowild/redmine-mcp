@@ -467,6 +467,40 @@ class TestAdvancedMCPTools:
         assert row['Update time'] == '2024-01-01'
 
     @patch('redmine_mcp.server.get_client')
+    def test_get_my_issues_includes_start_and_due_columns(self, mock_get_client):
+        """start / due columns sit inside the dash-row widths; a missing date is an empty cell"""
+        mock_client = Mock()
+        mock_client.get_current_user.return_value = {'id': 1, 'firstname': 'T', 'lastname': 'U'}
+        common = dict(description=None, status={'name': 'New'}, priority={'name': 'Normal'},
+                      project={'name': 'P', 'id': 1}, tracker={'name': 'Bug'}, author={'name': 'X'},
+                      updated_on='2024-01-01T00:00:00Z')
+        mock_client.list_issues.return_value = [
+            RedmineIssue(id=1, subject='Dated', start_date='2026-10-26', due_date='2026-11-01', **common),
+            RedmineIssue(id=2, subject='Undated', **common),
+        ]
+        mock_get_client.return_value = mock_client
+
+        lines = get_my_issues("open", 10).split('\n')
+        dash = next(i for i, l in enumerate(lines) if l.startswith('-----'))
+        widths = [len(seg) for seg in lines[dash].split(' ')]
+
+        def cells(line):
+            out, at = [], 0
+            for i, w in enumerate(widths):
+                end = len(line) if i == len(widths) - 1 else at + w
+                assert i == len(widths) - 1 or end >= len(line) or line[end] == ' ', f'column {i} overflows: {line!r}'
+                out.append(line[at:end].strip())
+                at = end + 1
+            return out
+
+        header = cells(lines[dash - 1])
+        dated = dict(zip(header, cells(lines[dash + 1])))
+        undated = dict(zip(header, cells(lines[dash + 2])))
+        assert header[-2:] == ['start', 'due']
+        assert (dated['Update time'], dated['start'], dated['due']) == ('2024-01-01', '2026-10-26', '2026-11-01')
+        assert (undated['start'], undated['due']) == ('', '')
+
+    @patch('redmine_mcp.server.get_client')
     def test_close_issue_success(self, mock_get_client):
         """Test closing issue successfully"""
         mock_client = Mock()
