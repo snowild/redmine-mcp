@@ -501,6 +501,51 @@ class TestAdvancedMCPTools:
         assert (undated['start'], undated['due']) == ('', '')
 
     @patch('redmine_mcp.server.get_client')
+    def test_get_my_issues_filters_by_status_names(self, mock_get_client):
+        """statuses= resolves names to ids via get_issue_statuses; unknown names are skipped"""
+        mock_client = Mock()
+        mock_client.get_current_user.return_value = {'id': 1, 'firstname': 'T', 'lastname': 'U'}
+        mock_client.get_issue_statuses.return_value = [
+            {'id': 1, 'name': '新建立'}, {'id': 2, 'name': '實作中'}, {'id': 3, 'name': '已解決'},
+        ]
+        mock_client.list_issues.return_value = []
+        mock_get_client.return_value = mock_client
+
+        get_my_issues(statuses='實作中,新建立,不存在')
+
+        _, kwargs = mock_client.list_issues.call_args
+        assert kwargs['status_id'] == '2,1'  # resolved in the given order, unknown skipped
+        assert 'status_filter' not in kwargs
+
+    @patch('redmine_mcp.server.get_client')
+    def test_get_my_issues_status_names_all_unknown_falls_back_to_open(self, mock_get_client):
+        """when no name resolves, fall back to the status_filter open behaviour"""
+        mock_client = Mock()
+        mock_client.get_current_user.return_value = {'id': 1, 'firstname': 'T', 'lastname': 'U'}
+        mock_client.get_issue_statuses.return_value = [{'id': 1, 'name': '新建立'}]
+        mock_client.list_issues.return_value = []
+        mock_get_client.return_value = mock_client
+
+        get_my_issues(statuses='沒有這個狀態')
+
+        _, kwargs = mock_client.list_issues.call_args
+        assert kwargs['status_id'] == 'o'
+
+    @patch('redmine_mcp.server.get_client')
+    def test_get_my_issues_no_statuses_keeps_open_filter(self, mock_get_client):
+        """statuses default empty: unchanged open behaviour, no get_issue_statuses call"""
+        mock_client = Mock()
+        mock_client.get_current_user.return_value = {'id': 1, 'firstname': 'T', 'lastname': 'U'}
+        mock_client.list_issues.return_value = []
+        mock_get_client.return_value = mock_client
+
+        get_my_issues()
+
+        _, kwargs = mock_client.list_issues.call_args
+        assert kwargs['status_id'] == 'o'
+        mock_client.get_issue_statuses.assert_not_called()
+
+    @patch('redmine_mcp.server.get_client')
     def test_close_issue_success(self, mock_get_client):
         """Test closing issue successfully"""
         mock_client = Mock()

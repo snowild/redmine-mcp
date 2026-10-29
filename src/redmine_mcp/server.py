@@ -1137,14 +1137,18 @@ Assigned to: {new_issue.assigned_to.get('name', 'Not assigned') if new_issue.ass
 
 
 @mcp.tool()
-def get_my_issues(status_filter: str = "open", limit: int = 20) -> str:
+def get_my_issues(status_filter: str = "open", limit: int = 20, statuses: str = "") -> str:
     """
     Get a list of issues assigned to me
-    
+
     Args:
         status_filter: status filter ("open", "closed", "all")
         limit: maximum number of return requests (default 20, maximum 100)
-    
+        statuses: comma-separated status NAMES (e.g. "實作中,新建立"); when given,
+            only issues in those statuses are returned, overriding status_filter.
+            Names are resolved to IDs; unknown names are skipped. If none resolve,
+            falls back to status_filter.
+
     Returns:
         My issue list
     """
@@ -1166,8 +1170,14 @@ def get_my_issues(status_filter: str = "open", limit: int = 20) -> str:
             'sort': 'updated_on:desc'
         }
         
-        # Processing status filter
-        if status_filter == "open":
+        # Processing status filter: explicit status names take precedence
+        resolved = []
+        if statuses.strip():
+            name_to_id = {s.get('name'): s.get('id') for s in client.get_issue_statuses()}
+            resolved = [str(name_to_id[n]) for n in (x.strip() for x in statuses.split(',')) if n and name_to_id.get(n) is not None]
+        if resolved:
+            params['status_id'] = ','.join(resolved)
+        elif status_filter == "open":
             params['status_id'] = 'o'  # Redmine API uses 'o' to indicate open status
         elif status_filter == "closed":
             params['status_id'] = 'c'  # Redmine API uses 'c' to indicate closed status

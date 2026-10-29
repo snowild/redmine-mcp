@@ -155,6 +155,14 @@ class TestRedmineValidator:
         
         assert result.is_valid
         assert len(result.errors) == 0
+
+    def test_validate_query_params_status_id_comma_list(self):
+        """status_id accepts a comma-separated list of positive ints; garbage is rejected"""
+        assert RedmineValidator.validate_query_params({'status_id': '1,2,3'}).is_valid
+        assert RedmineValidator.validate_query_params({'status_id': '2'}).is_valid
+        assert not RedmineValidator.validate_query_params({'status_id': '1,x'}).is_valid
+        assert not RedmineValidator.validate_query_params({'status_id': '1,'}).is_valid
+        assert not RedmineValidator.validate_query_params({'status_id': 'open'}).is_valid
     
     def test_validate_query_params_invalid_pagination(self):
         """Test invalid pagination parameters"""

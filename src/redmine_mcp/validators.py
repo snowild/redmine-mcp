@@ -205,9 +205,12 @@ class RedmineValidator:
         if 'status_id' in params:
             status_id = params['status_id']
             if status_id is not None:
-                # Allow positive integers or Redmine special values ('o' for open, 'c' for closed)
-                if not (isinstance(status_id, int) and status_id > 0) and status_id not in ['o', 'c']:
-                    errors.append("status_id must be a positive integer or 'o' (open)/'c' (closed)")
+                # Allow positive integers, a comma-separated list of positive ints
+                # (e.g. '1,2'), or Redmine special values ('o' open, 'c' closed)
+                is_int = isinstance(status_id, int) and status_id > 0
+                is_id_list = isinstance(status_id, str) and bool(re.fullmatch(r'\d+(,\d+)*', status_id)) and all(int(x) > 0 for x in status_id.split(','))
+                if not is_int and not is_id_list and status_id not in ['o', 'c']:
+                    errors.append("status_id must be a positive integer, a comma-separated list of positive integers, or 'o' (open)/'c' (closed)")
 
         # Date filter parameter validation
         date_fields = ['created_on', 'updated_on']
