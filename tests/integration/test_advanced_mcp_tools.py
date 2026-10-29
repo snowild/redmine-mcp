@@ -518,6 +518,20 @@ class TestAdvancedMCPTools:
         assert 'status_filter' not in kwargs
 
     @patch('redmine_mcp.server.get_client')
+    def test_get_my_issues_header_shows_status_names(self, mock_get_client):
+        """header line reflects the status names actually filtered by, not the open/closed flag"""
+        mock_client = Mock()
+        mock_client.get_current_user.return_value = {'id': 1, 'firstname': 'T', 'lastname': 'U'}
+        mock_client.get_issue_statuses.return_value = [{'id': 2, 'name': '實作中'}]
+        mock_client.list_issues.return_value = [RedmineIssue(
+            id=1, subject='S', description=None, status={'name': '實作中'}, priority={'name': 'Normal'},
+            project={'name': 'P', 'id': 1}, tracker={'name': 'Bug'}, author={'name': 'X'}, updated_on='2024-01-01T00:00:00Z')]
+        mock_get_client.return_value = mock_client
+
+        result = get_my_issues(statuses='實作中')
+        assert 'Status filter: 實作中' in result
+
+    @patch('redmine_mcp.server.get_client')
     def test_get_my_issues_status_names_all_unknown_falls_back_to_open(self, mock_get_client):
         """when no name resolves, fall back to the status_filter open behaviour"""
         mock_client = Mock()

@@ -1177,10 +1177,15 @@ def get_my_issues(status_filter: str = "open", limit: int = 20, statuses: str = 
             resolved = [str(name_to_id[n]) for n in (x.strip() for x in statuses.split(',')) if n and name_to_id.get(n) is not None]
         if resolved:
             params['status_id'] = ','.join(resolved)
+            status_label = statuses.strip()  # show the status names actually filtered by
         elif status_filter == "open":
             params['status_id'] = 'o'  # Redmine API uses 'o' to indicate open status
+            status_label = status_filter
         elif status_filter == "closed":
             params['status_id'] = 'c'  # Redmine API uses 'c' to indicate closed status
+            status_label = status_filter
+        else:
+            status_label = status_filter
         
         # Get a list of issues
         issues = client.list_issues(**params)
@@ -1190,7 +1195,7 @@ def get_my_issues(status_filter: str = "open", limit: int = 20, statuses: str = 
         
         # Format results
         result = f"""Issues assigned to {user_name.strip()}:
-Status filter: {status_filter}
+Status filter: {status_label}
 Found {len(issues)} issues:
 
 {"ID":<8} {"title":<35} {"project":<15} {"tracker":<10} {"state":<12} {"Update time":<11} {"start":<10} {"due":<10}
