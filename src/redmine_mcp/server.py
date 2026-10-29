@@ -1174,21 +1174,24 @@ def get_my_issues(status_filter: str = "open", limit: int = 20, statuses: str = 
         resolved = []
         if statuses.strip():
             name_to_id = {s.get('name'): s.get('id') for s in client.get_issue_statuses()}
-            resolved = [str(name_to_id[n]) for n in (x.strip() for x in statuses.split(',')) if n and name_to_id.get(n) is not None]
+            resolved = [name_to_id[n] for n in (x.strip() for x in statuses.split(',')) if n and name_to_id.get(n) is not None]
+
         if resolved:
-            params['status_id'] = ','.join(resolved)
             status_label = statuses.strip()  # show the status names actually filtered by
-        elif status_filter == "open":
-            params['status_id'] = 'o'  # Redmine API uses 'o' to indicate open status
-            status_label = status_filter
-        elif status_filter == "closed":
-            params['status_id'] = 'c'  # Redmine API uses 'c' to indicate closed status
-            status_label = status_filter
+            # Redmine REST status_id only takes a single value (a comma list coerces to its
+            # first int via Ruby to_i), so query each status separately and merge the results
+            merged = {}
+            for sid in resolved:
+                for iss in client.list_issues(**{**params, 'status_id': sid}):
+                    merged[iss.id] = iss
+            issues = sorted(merged.values(), key=lambda i: i.updated_on or '', reverse=True)[:limit]
         else:
+            if status_filter == "open":
+                params['status_id'] = 'o'  # Redmine API uses 'o' to indicate open status
+            elif status_filter == "closed":
+                params['status_id'] = 'c'  # Redmine API uses 'c' to indicate closed status
             status_label = status_filter
-        
-        # Get a list of issues
-        issues = client.list_issues(**params)
+            issues = client.list_issues(**params)
         
         if not issues:
             return f"Assigned to {user_name.strip()} of{status_filter}issue"

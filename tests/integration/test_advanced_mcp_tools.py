@@ -513,9 +513,9 @@ class TestAdvancedMCPTools:
 
         get_my_issues(statuses='實作中,新建立,不存在')
 
-        _, kwargs = mock_client.list_issues.call_args
-        assert kwargs['status_id'] == '2,1'  # resolved in the given order, unknown skipped
-        assert 'status_filter' not in kwargs
+        # Redmine REST status_id takes a single value, so each status is queried on its own
+        calls = mock_client.list_issues.call_args_list
+        assert [c.kwargs['status_id'] for c in calls] == [2, 1]  # resolved in order, unknown skipped
 
     @patch('redmine_mcp.server.get_client')
     def test_get_my_issues_header_shows_status_names(self, mock_get_client):
@@ -530,6 +530,25 @@ class TestAdvancedMCPTools:
 
         result = get_my_issues(statuses='實作中')
         assert 'Status filter: 實作中' in result
+
+    @patch('redmine_mcp.server.get_client')
+    def test_get_my_issues_merges_results_from_each_status(self, mock_get_client):
+        """each status is queried separately; results merge, dedup, sort by updated desc, cap at limit"""
+        mock_client = Mock()
+        mock_client.get_current_user.return_value = {'id': 1, 'firstname': 'T', 'lastname': 'U'}
+        mock_client.get_issue_statuses.return_value = [{'id': 1, 'name': '新建立'}, {'id': 2, 'name': '實作中'}]
+        common = dict(description=None, priority={'name': 'Normal'}, project={'name': 'P', 'id': 1},
+                      tracker={'name': 'Bug'}, author={'name': 'X'})
+        impl = RedmineIssue(id=10, subject='impl', status={'name': '實作中'}, updated_on='2026-10-28T00:00:00Z', **common)
+        newb = RedmineIssue(id=11, subject='new', status={'name': '新建立'}, updated_on='2026-10-29T00:00:00Z', **common)
+        mock_client.list_issues.side_effect = lambda **kw: {2: [impl], 1: [newb]}[kw['status_id']]
+        mock_get_client.return_value = mock_client
+
+        result = get_my_issues(statuses='實作中,新建立', limit=5)
+
+        assert 'Found 2 issues:' in result
+        # 11 updated later than 10 → sorted first
+        assert result.index('11') < result.index('10')
 
     @patch('redmine_mcp.server.get_client')
     def test_get_my_issues_status_names_all_unknown_falls_back_to_open(self, mock_get_client):
