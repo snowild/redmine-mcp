@@ -74,6 +74,56 @@ class TestRedmineClient:
         with pytest.raises(RedmineAPIError, match="not found"):
             self.client._make_request('GET', '/test')
     
+    @staticmethod
+    def _http_error_response(status_code, body, content_type):
+        """Build a real requests.Response (falsy for 4xx/5xx, unlike Mock)"""
+        response = requests.models.Response()
+        response.status_code = status_code
+        response._content = body.encode()
+        response.headers['Content-Type'] = content_type
+        response.url = 'https://test.redmine.com/issues/1.json'
+        return response
+
+    @patch('requests.Session.request')
+    def test_make_request_redmine_403_keeps_status_and_errors(self, mock_request):
+        """Test Redmine JSON 403 keeps status code and server errors"""
+        mock_request.return_value = self._http_error_response(
+            403, '{"errors": ["You are not authorized"]}', 'application/json')
+
+        with pytest.raises(RedmineAPIError) as exc_info:
+            self.client._make_request('PUT', '/issues/1.json')
+
+        assert exc_info.value.status_code == 403
+        assert str(exc_info.value).startswith("Insufficient permissions")
+        assert "(HTTP 403: You are not authorized)" in str(exc_info.value)
+        assert exc_info.value.response_data == {'errors': ['You are not authorized']}
+
+    @patch('requests.Session.request')
+    def test_make_request_nginx_403_shows_page_title(self, mock_request):
+        """Test non-JSON 403 (proxy page) shows the HTML title"""
+        mock_request.return_value = self._http_error_response(
+            403, '<html><head><title>403 Forbidden</title></head><body>nginx</body></html>', 'text/html')
+
+        with pytest.raises(RedmineAPIError) as exc_info:
+            self.client._make_request('PUT', '/issues/1.json')
+
+        assert exc_info.value.status_code == 403
+        assert "(HTTP 403: 403 Forbidden)" in str(exc_info.value)
+        assert exc_info.value.response_data is None
+
+    @patch('requests.Session.request')
+    def test_make_request_422_shows_validation_errors(self, mock_request):
+        """Test 422 is reported separately with Redmine validation errors"""
+        mock_request.return_value = self._http_error_response(
+            422, '{"errors": ["Subject cannot be blank", "Tracker is invalid"]}', 'application/json')
+
+        with pytest.raises(RedmineAPIError) as exc_info:
+            self.client._make_request('PUT', '/issues/1.json')
+
+        assert exc_info.value.status_code == 422
+        assert str(exc_info.value).startswith("Data format error")
+        assert "(HTTP 422: Subject cannot be blank; Tracker is invalid)" in str(exc_info.value)
+
     @patch('requests.Session.request')
     def test_get_issue_success(self, mock_request):
         """Test successful issue retrieval"""

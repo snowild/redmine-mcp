@@ -10,6 +10,7 @@ from datetime import datetime
 import json
 import mimetypes
 import os
+import re
 from pathlib import Path
 
 from .config import get_config
@@ -110,17 +111,26 @@ class RedmineClient:
             friendly_msg = RedmineValidator.get_friendly_error_message(e, "connection")
             raise RedmineAPIError(friendly_msg)
         except requests.exceptions.HTTPError as e:
-            status_code = e.response.status_code if e.response else None
+            # Response is falsy for 4xx/5xx, so compare against None explicitly
+            response = e.response
+            status_code = response.status_code if response is not None else None
             error_data = None
-            try:
-                if e.response and e.response.content:
-                    error_data = e.response.json()
-            except:
-                pass
-            
-            # Use friendly error messages
+            detail = ""
+            if response is not None and response.content:
+                try:
+                    error_data = response.json()
+                    if isinstance(error_data, dict):
+                        detail = "; ".join(str(err) for err in error_data.get('errors', []))
+                except ValueError:
+                    # Non-JSON body (e.g. an nginx error page): keep its title so proxy blocks are distinguishable
+                    match = re.search(r'<title>(.*?)</title>', response.text, re.IGNORECASE | re.DOTALL)
+                    detail = match.group(1).strip() if match else response.text[:200].strip()
+
+            # Use friendly error messages, followed by the original status and server message
             context = "issue" if "/issues" in url else "project" if "/projects" in url else "request"
             friendly_msg = RedmineValidator.get_friendly_error_message(e, context)
+            if status_code is not None:
+                friendly_msg += f" (HTTP {status_code}{': ' + detail if detail else ''})"
             raise RedmineAPIError(friendly_msg, status_code, error_data)
         except requests.exceptions.RequestException as e:
             friendly_msg = RedmineValidator.get_friendly_error_message(e, "request")
